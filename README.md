@@ -1,6 +1,6 @@
 # Kaya Backend
 
-Kaya Backend is a RESTful API service built in Go. This repository contains the server code, routing, configurations, and database connection settings necessary to run the backend service.
+Production-ready Go backend powering Kaya, a secure and verified house hunting platform for the Kenyan market.
 
 ## Tech Stack
 - **Language:** Go (Golang)
