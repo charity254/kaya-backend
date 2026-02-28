@@ -25,8 +25,8 @@ Step-by-step guide and deliverables for the backend team. Use with [KAYA_REQUIRE
 
 ### Step 0.1 — Repository and project structure
 
-- [ ] Ensure Go module is initialized (`go mod init` if new).
-- [ ] Create and maintain this structure:
+- [x] Ensure Go module is initialized (`go mod init` if new).
+- [x] Create and maintain this structure:
 
 ```
 cmd/
@@ -66,8 +66,8 @@ pkg/
 .env.example
 ```
 
-- [ ] Add `.env` to `.gitignore`; commit `.env.example` only.
-- [ ] Document in README: prerequisites (Go 1.20+, PostgreSQL), how to run, env vars.
+- [x] Add `.env` to `.gitignore`; commit `.env.example` only.
+- [x] Document in README: prerequisites (Go 1.20+, PostgreSQL), how to run, env vars.
 
 **Deliverable:** Repo structure, `.env.example`, README updates.
 
@@ -75,13 +75,13 @@ pkg/
 
 ### Step 0.2 — Configuration and environment
 
-- [ ] Implement `internal/config/config.go` to load:
+- [x] Implement `internal/config/config.go` to load:
   - `PORT` (default `8080`)
   - `DB_URL` (PostgreSQL connection string)
   - `JWT_SECRET`
   - Later: `MPESA_CONSUMER_KEY`, `MPESA_CONSUMER_SECRET`, `MPESA_PASSKEY`, `MPESA_SHORTCODE`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` (or similar for storage).
-- [ ] Use `godotenv` to load `.env` in non-production or as fallback.
-- [ ] Validate required vars at startup; fail fast with clear error if missing.
+- [x] Use `godotenv` to load `.env` in non-production or as fallback.
+- [x] Validate required vars at startup; fail fast with clear error if missing.
 
 **Deliverable:** Config package and `.env.example` with all variables documented.
 
@@ -89,11 +89,11 @@ pkg/
 
 ### Step 0.3 — Database connection
 
-- [ ] Implement `internal/database/db.go`:
+- [x] Implement `internal/database/db.go`:
   - Open connection using `DB_URL`.
   - Expose a way to ping the DB (for health check).
   - Consider connection pool settings (max open, max idle).
-- [ ] In `main.go`, load config, connect to DB, defer close, and pass DB (or repository interface) to handlers/services.
+- [x] In `main.go`, load config, connect to DB, defer close, and pass DB (or repository interface) to handlers/services.
 
 **Deliverable:** DB connection and ping used by server startup and health check.
 
@@ -101,11 +101,11 @@ pkg/
 
 ### Step 0.4 — Health endpoint and server bootstrap
 
-- [ ] Register `GET /health` that:
+- [x] Register `GET /health` that:
   - Returns 200 and a simple payload (e.g. `{"status":"ok"}`).
   - Optionally checks DB ping and returns 503 if DB is down.
-- [ ] Start HTTP server on `PORT` with gorilla/mux (or chosen router).
-- [ ] Run `go run cmd/server/main.go` and confirm `GET /health` succeeds.
+- [x] Start HTTP server on `PORT` with gorilla/mux (or chosen router).
+- [x] Run `go run cmd/server/main.go` and confirm `GET /health` succeeds.
 
 **Deliverable:** Running server with health check.
 
@@ -115,8 +115,8 @@ pkg/
 
 ### Step 1.1 — Database migrations
 
-- [ ] Add migration tool (e.g. golang-migrate, goose, or plain SQL in `migrations/`).
-- [ ] Create **up** migration with:
+- [x] Add migration tool (e.g. golang-migrate, goose, or plain SQL in `migrations/`).
+- [x] Create **up** migration with:
 
 **users**
 
@@ -167,8 +167,8 @@ pkg/
 - `CREATE INDEX idx_houses_rent_price ON houses(rent_price);`
 - Optional: index on `payments(status)`, `house_media(house_id)`.
 
-- [ ] Create **down** migration to drop tables in reverse order.
-- [ ] Document how to run migrations (e.g. `migrate -path migrations -database $DB_URL up`).
+- [x] Create **down** migration to drop tables in reverse order.
+- [x] Document how to run migrations (e.g. `migrate -path migrations -database $DB_URL up`).
 
 **Deliverable:** Migrations that create full schema and indexes; runnable up/down.
 
