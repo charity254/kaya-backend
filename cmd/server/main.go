@@ -3,10 +3,11 @@ package main
 import (
 	"log"
 	"net/http"
-	
-	"github.com/gorilla/mux"   //handles HTTP routing
-	"github.com/charity254/kaya-backend/internal/config" //custom config package
-	"github.com/charity254/kaya-backend/internal/database"//database package
+
+	"github.com/charity254/kaya-backend/internal/auth"
+	"github.com/charity254/kaya-backend/internal/config"   //custom config package
+	"github.com/charity254/kaya-backend/internal/database" //database package
+	"github.com/gorilla/mux"                               //handles HTTP routing
 )
 
 func main() {
@@ -18,8 +19,11 @@ func main() {
 	}
 
 	db := database.Connect(cfg.DBUrl)
-
 	defer db.Close()
+
+	authRepo := auth.NewRepository(db)
+	authService := auth.NewService(authRepo)
+	authHandler := auth.NewHandler(authService)
 
 	router := mux.NewRouter()
 
@@ -28,11 +32,12 @@ func main() {
 		w.Write([]byte("Kaya backend running"))
 	}).Methods("GET")
 
-	log.Println("Server  starting on port:", port)
+	router.HandleFunc("/auth/request-otp", authHandler.RequestOTP).Methods("POST")
+	router.HandleFunc("/auth/verify-otp", authHandler.VerifyOTP).Methods("POST")
 
-		err := http.ListenAndServe(":"+port, router)
-	
-			if err != nil{
-				log.Fatal("Server failed to start:", err)
+	log.Println("Server starting on port:", port)
+	err := http.ListenAndServe(":"+port, router)
+	if err != nil{
+		log.Fatal("Server failed to start:", err)
 	}
 }
