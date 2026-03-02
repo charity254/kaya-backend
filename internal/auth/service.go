@@ -53,16 +53,16 @@ func generateOTP() string {
 }
 
 // RequestOTP validates the phone number, creates a user if needed, generates OTP and stores it. Returns the OTP (**mocked sms**)
-func (s *Service) RequestOTP(phone string) (string, error) {
+func (s *Service) RequestOTP(phone string) error {
 	//Normalize phone number
 	normalizedPhone, err := normalizePhone(phone)
 	if err != nil {
-		return "", err
+		return err
 	}
 	//Create user if they don't exist already
 	_, err = s.repo.CreateUserIfNotExists(normalizedPhone)
 	if err != nil {
-		return "", fmt.Errorf("failed to create user: %w", err)
+		return fmt.Errorf("failed to create user: %w", err)
 	}
 
 	//Generate a new 6 digit OTP
@@ -71,13 +71,13 @@ func (s *Service) RequestOTP(phone string) (string, error) {
 	//Save OTP to the database with 5 minute expiry
 	err = s.repo.SaveOTP(normalizedPhone, otp)
 	if err != nil {
-		return "", fmt.Errorf("failed to save OTP: %w", err)
+		return fmt.Errorf("failed to save OTP: %w", err)
 	}
 
 	//TO DO: REPLACE THIS WITH ACTUAL SMS SENDING. CHECK(Africa's Talking / Twilio)
 	//returning OTP directly for testing
 	fmt.Printf("OTP for %s: %s\n", normalizedPhone, otp)
-	return otp, nil
+	return nil
 }
 
 // VerifyOTP checks if provided OTP is valid for the given phone number

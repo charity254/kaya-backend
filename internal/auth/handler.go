@@ -23,7 +23,6 @@ type requestOTPRequest struct {
 //requestOTPResponse defines the response body for the request OTP endpoint
 type requestOTPResponse struct {
 	Message string  `json:"phone"`
-	OTP string `json:"otp"`
 }
 //verifyOTPRequest defines the expected request body for the verify OTP endpoint
 type verifyOTPRequest struct {
@@ -64,7 +63,7 @@ func (h *Handler) RequestOTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Call the service to handle the OTP request
-	otp, err := h.service.RequestOTP(req.Phone)
+	err := h.service.RequestOTP(req.Phone)
 	if err != nil {
 		//if the error is about invalid phone format, return 400
 		writeError(w, http.StatusBadRequest, err.Error())
@@ -74,7 +73,6 @@ func (h *Handler) RequestOTP(w http.ResponseWriter, r *http.Request) {
 	//Return success response with OTP (**just for development testing**)
 	writeJSON(w, http.StatusOK, requestOTPResponse{
 		Message: "OTP sent successfully",
-		OTP: otp,
 	})
 }
 
