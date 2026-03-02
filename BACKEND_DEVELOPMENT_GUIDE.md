@@ -182,6 +182,7 @@ pkg/
 - [x] Generate OTP (e.g. 6 digits), store in DB or cache with 5-minute expiry.
   - If no `users` row for phone, create one (id, phone, created_at, updated_at).
 - [x] Send OTP via chosen provider (e.g. Africa’s Talking, Twilio, or mock for dev).
+  - *Note: We are yet to connect to Africa's Talking or Twilio; currently using a mock for development.*
 - [ ] Response: e.g. `{"message": "OTP sent"}`. Do not return OTP in response.
 - [ ] Add rate limiting for this endpoint (e.g. 5 requests per phone per 15 minutes).
 
