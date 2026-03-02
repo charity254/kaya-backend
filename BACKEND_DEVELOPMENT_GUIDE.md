@@ -178,10 +178,10 @@ pkg/
 
 - [ ] Implement `POST /auth/request-otp`.
 - [ ] Request body: e.g. `{"phone": "254712345678"}`.
-- [ ] Validate phone format ( Kenyan format; normalize to 254… ).
-- [ ] Generate OTP (e.g. 6 digits), store in DB or cache with 5-minute expiry.
+- [x] Validate phone format ( Kenyan format; normalize to 254… ).
+- [x] Generate OTP (e.g. 6 digits), store in DB or cache with 5-minute expiry.
   - If no `users` row for phone, create one (id, phone, created_at, updated_at).
-- [ ] Send OTP via chosen provider (e.g. Africa’s Talking, Twilio, or mock for dev).
+- [x] Send OTP via chosen provider (e.g. Africa’s Talking, Twilio, or mock for dev).
 - [ ] Response: e.g. `{"message": "OTP sent"}`. Do not return OTP in response.
 - [ ] Add rate limiting for this endpoint (e.g. 5 requests per phone per 15 minutes).
 
@@ -193,11 +193,11 @@ pkg/
 
 - [ ] Implement `POST /auth/verify-otp`.
 - [ ] Request body: e.g. `{"phone": "254712345678", "otp": "123456"}`.
-- [ ] Validate input; verify OTP against stored value and expiry.
+- [x] Validate input; verify OTP against stored value and expiry.
 - [ ] On success: find or create user by phone; issue JWT with user id (and optional role).
 - [ ] JWT expiry: 24 hours; sign with `JWT_SECRET`.
 - [ ] Response: e.g. `{"token": "<jwt>", "user": {"id": "<uuid>", "phone": "..."}}`.
-- [ ] Invalidate or delete used OTP so it cannot be reused.
+- [x] Invalidate or delete used OTP so it cannot be reused.
 
 **Deliverable:** `POST /auth/verify-otp` returning JWT and user info.
 
