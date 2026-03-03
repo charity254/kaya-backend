@@ -6,16 +6,19 @@ import (
 	"math/rand"
 	"regexp"
 	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 // Service handles all business logic related to authentication
 type Service struct {
 	repo *Repository
+	jwtSecret string   //secret key for signing JWT tokens
 }
 
 // NewService creates a new auth service with the given repository
-func NewService(repo *Repository) *Service {
-	return &Service{repo: repo}
+func NewService(repo *Repository, jwtSecret string) *Service {
+	return &Service{repo: repo, jwtSecret: jwtSecret}
 }
 
 // normalizePhone normalizes a Kenyan phone number to the 254xxxxxxx format. It can accept formats: 07xxxxxx, 7xxxxxx, 2547xxxxxx, +2547xxxxx
@@ -82,33 +85,67 @@ func (s *Service) RequestOTP(phone string) error {
 
 // VerifyOTP checks if provided OTP is valid for the given phone number
 // returns normalized phone number if valid
-func (s *Service) VerifyOTP(phone, code string) (string, error) {
+func (s *Service) VerifyOTP(phone, code string) (string, string, string, error) {
 	//Normalize phone number first
 	normalizedPhone, err := normalizePhone(phone)
 	if err != nil {
-		return "", err
+		return "", "", "", err
 	}
 
 	//Retrieve stored OTP for this phone number
 	storedCode, expiresAt, err := s.repo.GetOTP(normalizedPhone)
 	if err != nil {
-		return "", errors.New("OTP not found or already used")
+		return "", "", "", errors.New("OTP not found or already used")
 	}
 
 	//Check if the OTP has expired
 	if time.Now().After(expiresAt) {
-		return "", errors.New("OTP has expired")
+		return "", "", "", errors.New("OTP has expired")
 	}
 
 	//Check if provided OTP matches the stored one
 	if code != storedCode {
-		return "", errors.New("invalid OTP")
+		return "", "", "", errors.New("invalid OTP")
 	}
 
 	//Mark the OTP as used so it cannot be reused
 	err = s.repo.MarkOTPUsed(normalizedPhone)
 	if err != nil {
-		return "", fmt.Errorf("failed to mark OTP as used: %w", err)
+		return "", "", "", fmt.Errorf("failed to mark OTP as used: %w", err)
 	}
-	return normalizedPhone, nil
+
+	//Get the user's id from the database
+	userID, userPhone, err := s.repo.GetUserByPhone(normalizedPhone)
+	if err != nil {
+		return "", "", "", fmt.Errorf("failed to get user: %w", err)
+	}
+
+	//Generate JWT token for the user
+	token, err := generateJWT(userID, s.jwtSecret)
+	if err != nil {
+		return "", "", "", fmt.Errorf("failed to generate token %w", err)
+	}
+	return token, userID, userPhone, nil
+}
+
+//generateJWT creates a signed JWT token for the given user id. The token expires in 24hours and is signed with the JWT secret
+func generateJWT(userID string, jwtSecret string) (string, error) {
+	//Define the claims (data) to store inside the JWT
+	claims := jwt.MapClaims{
+		"user_id": userID,
+		"exp": time.Now().Add(24 * time.Hour).Unix(),
+		"iat": time.Now().Unix(),
+	}
+
+	//Create the token with the claims and signing method
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	//Sign the token with our secret key and return it
+	//Convert secret to bytes and sign the token
+	secret := []byte(jwtSecret)
+	signedToken, err := token.SignedString(secret)
+	if err != nil {
+		return  "", fmt.Errorf("failed to sign token %w", err)
+	}
+	return signedToken, nil
 }

@@ -22,7 +22,7 @@ func main() {
 	defer db.Close()
 
 	authRepo := auth.NewRepository(db)
-	authService := auth.NewService(authRepo)
+	authService := auth.NewService(authRepo, cfg.JWTSecret)
 	authHandler := auth.NewHandler(authService)
 
 	router := mux.NewRouter()

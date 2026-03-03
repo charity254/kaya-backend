@@ -2,6 +2,7 @@ package auth
 
 import (
 	"database/sql"
+	"fmt"
 	"time"
 )
 
@@ -71,4 +72,18 @@ func (r *Repository) GetOTP(phone string) (string, time.Time, error) {
 func (r *Repository) MarkOTPUsed(phone string) error {
 	_, err := r.db.Exec(`UPDATE otps SET used = true WHERE phone = $1`, phone)
 	return err
+}
+
+//GetUserByPhone retrieves a user's id and phone from the database by their phone number
+func (r *Repository) GetUserByPhone(phone string) (string, string, error) {
+	var id, userPhone string
+	query := `
+	SELECT id, phone FROM users
+	WHERE phone = $1
+	`
+	err := r.db.QueryRow(query, phone).Scan(&id, &userPhone)
+	if err != nil {
+		return "", "", fmt.Errorf("User not found: %w", err)
+	}
+	return id, userPhone, nil
 }

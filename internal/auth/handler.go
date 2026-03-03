@@ -22,7 +22,7 @@ type requestOTPRequest struct {
 
 //requestOTPResponse defines the response body for the request OTP endpoint
 type requestOTPResponse struct {
-	Message string  `json:"phone"`
+	Message string  `json:"message"`
 }
 //verifyOTPRequest defines the expected request body for the verify OTP endpoint
 type verifyOTPRequest struct {
@@ -33,7 +33,15 @@ type verifyOTPRequest struct {
 //verifyOTPResponse defines the response body for the verified OTP endpoint
 type verifyOTPResponse struct {
 	Message string `json:"message"`
+	Token string `json:"token"`
+	User userResponse `json:"user"`
 } 
+
+//userResponse defines the user info returned after successful authentication
+type userResponse struct {
+	ID  string `json:"id"`
+	Phone string `json:"phone"`
+}
 
 //writeJSON is a helper function that writes a JSON response with given status codes
 func writeJSON(w http.ResponseWriter, status int, data interface{}) {
@@ -91,8 +99,8 @@ func(h *Handler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//Call the service to handle the OTP verification
-	_, err := h.service.VerifyOTP(req.Phone, req.OTP)
+	//Call the service to handle the OTP verification and JWT token
+	token, userID, userPhone, err := h.service.VerifyOTP(req.Phone, req.OTP)
 	if err != nil {
 		//if OTP is invalid or expired return 400
 		writeError(w, http.StatusBadRequest, err.Error())
@@ -102,6 +110,11 @@ func(h *Handler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 	//Return success response
 	writeJSON(w, http.StatusOK, verifyOTPResponse{
 		Message: "OTP verified successfully",
+		Token: token,
+		User: userResponse{
+			ID: userID,
+			Phone: userPhone,
+		},
 	})
 	
 }
