@@ -2,6 +2,8 @@
 
 Production-ready Go backend powering Kaya, a secure and verified house hunting platform for the Kenyan market.
 
+**Live API**: `https://kaya-backend-production-beb0.up.railway.app`
+
 ## Tech Stack
 - **Language:** Go (Golang)
 - **Routing:** [gorilla/mux](https://github.com/gorilla/mux)

@@ -1,6 +1,8 @@
 # Kaya API Documentation
 
-Base URL: `http://localhost:8080` (development)
+Base URL:
+- Production: `https://kaya-backend-production-beb0.up.railway.app`
+- Development: `http://localhost:8080`
 
 ---
 
