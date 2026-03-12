@@ -3,12 +3,13 @@ package main
 import (
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/charity254/kaya-backend/internal/auth"
-	"github.com/charity254/kaya-backend/internal/config"   //custom config package
-	"github.com/charity254/kaya-backend/internal/database" //database package
+	"github.com/charity254/kaya-backend/internal/config"     //custom config package
+	"github.com/charity254/kaya-backend/internal/database"   //database package
 	"github.com/charity254/kaya-backend/internal/middleware" //authentication
-	"github.com/gorilla/mux"                               //handles HTTP routing
+	"github.com/gorilla/mux"                                 //handles HTTP routing
 	"github.com/rs/cors"
 )
 
@@ -23,9 +24,11 @@ func main() {
 	db := database.Connect(cfg.DBUrl)
 	defer db.Close()
 
+	otpLimiter := middleware.NewRateLimiter(5, 15*time.Minute)
+
 	authRepo := auth.NewRepository(db)
 	authService := auth.NewService(authRepo, cfg.JWTSecret)
-	authHandler := auth.NewHandler(authService)
+	authHandler := auth.NewHandler(authService, otpLimiter)
 
 	router := mux.NewRouter()
 

@@ -3,16 +3,19 @@ package auth
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/charity254/kaya-backend/internal/middleware"
 )
 
 //Handler handles all HTTP requests related to authentication
 type Handler struct {
 	service *Service
+	otpLimiter *middleware.RateLimiter
 }
 
 //NewHandler creates a new auth handler with the given service
-func NewHandler(service *Service) *Handler {
-	return &Handler{service: service}
+func NewHandler(service *Service, otpLimiter *middleware.RateLimiter) *Handler {
+	return &Handler{service: service, otpLimiter: otpLimiter}
 }
 
 //requestOTPRequest defines the expected request body for the request OTP endpoint
@@ -67,6 +70,12 @@ func (h *Handler) RequestOTP(w http.ResponseWriter, r *http.Request) {
 	//Check that phone number was provided
 	if req.Phone == "" {
 		writeError(w, http.StatusBadRequest, "phone number is required")
+		return
+	}
+
+	//check rate limit for this phone number before processing (5 requets per 15min per phone number)
+	if !h.otpLimiter.IsAllowed(req.Phone) {
+		writeError(w, http.StatusTooManyRequests, "too many OTP requests, please try again in 15minutes")
 		return
 	}
 
