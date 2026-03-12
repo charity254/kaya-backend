@@ -86,6 +86,21 @@ Authorization: Bearer YOUR_JWT_TOKEN
 
 ---
 
+## Protected Routes
+
+All routes registered under the protected subrouter require a valid JWT token in the `Authorization` header.
+
+**Format:**
+```
+Authorization: Bearer <token>
+```
+
+Currently, the server is configured to protect routes added to the subrouter in `main.go`.
+
+---
+
+---
+
 ## Notes for Frontend
 - OTP expires after **5 minutes** — show a countdown and allow resend
 - JWT expires after **24 hours** — redirect to login on `401` response

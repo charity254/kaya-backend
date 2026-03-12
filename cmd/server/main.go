@@ -7,6 +7,7 @@ import (
 	"github.com/charity254/kaya-backend/internal/auth"
 	"github.com/charity254/kaya-backend/internal/config"   //custom config package
 	"github.com/charity254/kaya-backend/internal/database" //database package
+	"github.com/charity254/kaya-backend/internal/middleware" //authentication
 	"github.com/gorilla/mux"                               //handles HTTP routing
 	"github.com/rs/cors"
 )
@@ -35,6 +36,11 @@ func main() {
 
 	router.HandleFunc("/auth/request-otp", authHandler.RequestOTP).Methods("POST")
 	router.HandleFunc("/auth/verify-otp", authHandler.VerifyOTP).Methods("POST")
+
+	//protected routes (JWT authentication required). Every request to this routes must have a valid JWT  token
+	protected := router.PathPrefix("").Subrouter()
+	protected.Use(middleware.AuthMiddleware(cfg.JWTSecret))
+
 
 	c := cors.New(cors.Options{
     AllowedOrigins: []string{"*"}, // Replace with frontend URL before launch

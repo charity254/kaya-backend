@@ -206,13 +206,13 @@ pkg/
 
 ### Step 1.4 — JWT middleware and protected routes
 
-- [ ] Implement middleware that:
+- [x] Implement middleware that:
   - Reads `Authorization: Bearer <token>`.
   - Parses and validates JWT; extracts user id (and role).
   - Sets user context on request (e.g. `context.WithValue` or request-scoped struct).
   - Returns 401 if missing or invalid token.
-- [ ] Apply this middleware to all routes that require authentication (houses list/detail can be public; initiate payment, admin, profile require auth).
-- [ ] Document which routes are public vs protected.
+- [x] Apply this middleware to all routes that require authentication (houses list/detail can be public; initiate payment, admin, profile require auth).
+- [x] Document which routes are public vs protected.
 
 **Deliverable:** JWT middleware and route protection for authenticated endpoints.
 
