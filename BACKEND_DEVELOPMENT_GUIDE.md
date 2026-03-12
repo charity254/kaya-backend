@@ -176,11 +176,11 @@ pkg/
 
 ### Step 1.2 — Auth: request OTP
 
-- [ ] Implement `POST /auth/request-otp`.
-- [ ] Request body: e.g. `{"phone": "254712345678"}`.
+- [x] Implement `POST /auth/request-otp`.
+- [x] Request body: e.g. `{"phone": "254712345678"}`.
 - [x] Validate phone format ( Kenyan format; normalize to 254… ).
 - [x] Generate OTP (e.g. 6 digits), store in DB or cache with 5-minute expiry.
-  - If no `users` row for phone, create one (id, phone, created_at, updated_at).
+  - [x] If no `users` row for phone, create one (id, phone, created_at, updated_at).
 - [x] Send OTP via chosen provider (e.g. Africa’s Talking, Twilio, or mock for dev).
   - *Note: We are yet to connect to Africa's Talking or Twilio; currently using a mock for development.*
 - [x] Response: e.g. `{"message": "OTP sent"}`. Do not return OTP in response.
@@ -192,12 +192,12 @@ pkg/
 
 ### Step 1.3 — Auth: verify OTP and issue JWT
 
-- [ ] Implement `POST /auth/verify-otp`.
-- [ ] Request body: e.g. `{"phone": "254712345678", "otp": "123456"}`.
+- [x] Implement `POST /auth/verify-otp`.
+- [x] Request body: e.g. `{"phone": "254712345678", "otp": "123456"}`.
 - [x] Validate input; verify OTP against stored value and expiry.
-- [ ] On success: find or create user by phone; issue JWT with user id (and optional role).
-- [ ] JWT expiry: 24 hours; sign with `JWT_SECRET`.
-- [ ] Response: e.g. `{"token": "<jwt>", "user": {"id": "<uuid>", "phone": "..."}}`.
+- [x] On success: find or create user by phone; issue JWT with user id (and optional role).
+- [x] JWT expiry: 24 hours; sign with `JWT_SECRET`.
+- [x] Response: e.g. `{"token": "<jwt>", "user": {"id": "<uuid>", "phone": "..."}}`.
 - [x] Invalidate or delete used OTP so it cannot be reused.
 
 **Deliverable:** `POST /auth/verify-otp` returning JWT and user info.
