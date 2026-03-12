@@ -184,7 +184,7 @@ pkg/
 - [x] Send OTP via chosen provider (e.g. Africa’s Talking, Twilio, or mock for dev).
   - *Note: We are yet to connect to Africa's Talking or Twilio; currently using a mock for development.*
 - [x] Response: e.g. `{"message": "OTP sent"}`. Do not return OTP in response.
-- [ ] Add rate limiting for this endpoint (e.g. 5 requests per phone per 15 minutes).
+- [x] Add rate limiting for this endpoint (e.g. 5 requests per phone per 15 minutes).
 
 **Deliverable:** `POST /auth/request-otp` with validation, storage, send, and rate limit.
 
@@ -357,11 +357,11 @@ pkg/
 ### Step 4.2 — Rate limiting
 
 - [ ] Apply rate limiting to:
-  - `POST /auth/request-otp` (per phone or per IP).
-  - `POST /auth/verify-otp` (per phone or per IP).
-  - `POST /payments/initiate` (per user or per IP).
-- [ ] Use middleware (e.g. in-memory or Redis) with sensible limits (e.g. 5 OTP requests per 15 min, 10 payment initiates per minute per user).
-- [ ] Return 429 when limit exceeded.
+  - [x] `POST /auth/request-otp` (per phone or per IP).
+  - [ ] `POST /auth/verify-otp` (per phone or per IP).
+  - [ ] `POST /payments/initiate` (per user or per IP).
+- [x] Use middleware (e.g. in-memory or Redis) with sensible limits (e.g. 5 OTP requests per 15 min, 10 payment initiates per minute per user).
+- [x] Return 429 when limit exceeded.
 
 **Deliverable:** Rate limiting on OTP and payment endpoints; 429 responses.
 

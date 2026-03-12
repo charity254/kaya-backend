@@ -45,6 +45,7 @@ Authorization: Bearer YOUR_JWT_TOKEN
 | `400` | `"invalid request body"` | Body missing or not valid JSON |
 | `400` | `"phone number is required"` | Phone field is empty |
 | `400` | `"invalid Kenyan phone number format"` | Not a valid Kenyan number |
+| `429` | `"too many OTP requests, please try again in 15minutes"` | Rate limit exceeded (5 requests per 15min) |
 
 ---
 

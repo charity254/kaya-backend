@@ -16,6 +16,7 @@ Production-ready Go backend powering Kaya, a secure and verified house hunting p
 - `internal/config/config.go`: Handles loading of environment variables (from a `.env` file or system environment variables).
 - `internal/database/db.go`: Manages the PostgreSQL database connection and ping tests.
 - `internal/middleware/auth.go`: Contains authentication middleware for route protection.
+- `internal/middleware/ratelimit.go`: In-memory rate limiting implementation for preventing abuse.
 
 ## Setup Instructions
 
