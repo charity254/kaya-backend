@@ -1,6 +1,6 @@
 # KAYA Backend — Development Guide
 
-Step-by-step guide and deliverables for the backend team. Use with [KAYA_REQUIREMENTS_AND_DESCRIPTION.md](../KAYA_REQUIREMENTS_AND_DESCRIPTION.md) as the source of truth.
+Step-by-step guide and deliverables for the backend team.
 
 ---
 
