@@ -8,6 +8,7 @@ import (
 	"github.com/charity254/kaya-backend/internal/auth"
 	"github.com/charity254/kaya-backend/internal/config"     //custom config package
 	"github.com/charity254/kaya-backend/internal/database"   //database package
+	"github.com/charity254/kaya-backend/internal/houses"
 	"github.com/charity254/kaya-backend/internal/middleware" //authentication
 	"github.com/gorilla/mux"                                 //handles HTTP routing
 	"github.com/rs/cors"
@@ -30,6 +31,10 @@ func main() {
 	authService := auth.NewService(authRepo, cfg.JWTSecret)
 	authHandler := auth.NewHandler(authService, otpLimiter)
 
+	housesRepo := houses.NewRepository(db)
+	housesService := houses.NewService(housesRepo)
+	housesHandler := houses.NewHandler(housesService)
+
 	router := mux.NewRouter()
 
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -39,6 +44,9 @@ func main() {
 
 	router.HandleFunc("/auth/request-otp", authHandler.RequestOTP).Methods("POST")
 	router.HandleFunc("/auth/verify-otp", authHandler.VerifyOTP).Methods("POST")
+
+	router.HandleFunc("/houses", housesHandler.GetHouses).Methods("GET")
+	router.HandleFunc("/houses/{id}", housesHandler.GetHouseByID).Methods("GET")
 
 	//protected routes (JWT authentication required). Every request to this routes must have a valid JWT  token
 	protected := router.PathPrefix("").Subrouter()

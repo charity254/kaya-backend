@@ -220,13 +220,13 @@ pkg/
 
 ### Step 1.5 — Houses: list and filters
 
-- [ ] Implement `GET /houses`.
-- [ ] Support query params: e.g. `general_location`, `min_rent`, `max_rent`, `limit`, `offset`.
-- [ ] Return list of houses with:
+- [x] Implement `GET /houses`.
+- [x] Support query params: e.g. `general_location`, `min_rent`, `max_rent`, `limit`, `offset`.
+- [x] Return list of houses with:
   - For unauthenticated or non-paying users: exclude or null `exact_location`, `contact_number`; set `is_unlocked: false`.
   - For authenticated users who have paid for this house: include `exact_location`, `contact_number`; set `is_unlocked: true`.
-- [ ] Include `house_media` (media_url, media_type) in response or via nested object.
-- [ ] Use indexes on `general_location` and `rent_price` in queries.
+- [x] Include `house_media` (media_url, media_type) in response or via nested object.
+- [x] Use indexes on `general_location` and `rent_price` in queries.
 
 **Deliverable:** `GET /houses` with filters and correct unlock masking.
 
@@ -234,11 +234,11 @@ pkg/
 
 ### Step 1.6 — Houses: get by ID and unlock logic
 
-- [ ] Implement `GET /houses/:id`.
-- [ ] If house not found, return 404.
-- [ ] If request is unauthenticated: return house with `exact_location`, `contact_number` null and `is_unlocked: false`.
-- [ ] If authenticated: check if there is a successful payment (`status = 'paid'`) for this user_id and house_id. If yes, return full details and `is_unlocked: true`; otherwise masked and `is_unlocked: false`.
-- [ ] Include media array in response.
+- [x] Implement `GET /houses/:id`.
+- [x] If house not found, return 404.
+- [x] If request is unauthenticated: return house with `exact_location`, `contact_number` null and `is_unlocked: false`.
+- [x] If authenticated: check if there is a successful payment (`status = 'paid'`) for this user_id and house_id. If yes, return full details and `is_unlocked: true`; otherwise masked and `is_unlocked: false`.
+- [x] Include media array in response.
 
 **Deliverable:** `GET /houses/:id` with correct unlock behavior per user.
 

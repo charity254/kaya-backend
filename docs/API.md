@@ -87,6 +87,54 @@ Authorization: Bearer YOUR_JWT_TOKEN
 
 ---
 
+## Houses
+
+### 1. Get Houses
+**GET** `/houses` — Auth optional
+
+**Query Parameters:**
+- `limit` (int): Items per page (default 20, max 100)
+- `offset` (int): Pagination offset
+
+**Success `200`:**
+```json
+[
+  {
+    "id": "uuid",
+    "title": "Beautiful Villa",
+    "description": "A spacious house...",
+    "rent_price": 40000,
+    "general_location": "Nairobi",
+    "exact_location": null,
+    "latitude": null,
+    "longitude": null,
+    "contact_number": null,
+    "managed_by": "Agent Name",
+    "landmarks": "Near mall",
+    "distance_info": "5km from CBD",
+    "is_unlocked": false,
+    "media": [],
+    "created_at": "timestamp",
+    "updated_at": "timestamp"
+  }
+]
+```
+*Note: `exact_location`, `latitude`, `longitude`, and `contact_number` are only populated if the user is authenticated and has paid to unlock the house (`is_unlocked: true`). Otherwise, they are `null`.*
+
+---
+
+### 2. Get House by ID
+**GET** `/houses/{id}` — Auth optional
+
+**Success `200`:**
+Returns a single house object identical to the list items above.
+
+**Errors:**
+- `404` — `"house not found"`
+- `500` — Server errors
+
+---
+
 ## Protected Routes
 
 All routes registered under the protected subrouter require a valid JWT token in the `Authorization` header.
