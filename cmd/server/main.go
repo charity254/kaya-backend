@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/charity254/kaya-backend/internal/admin"
 	"github.com/charity254/kaya-backend/internal/auth"
 	"github.com/charity254/kaya-backend/internal/config"     //custom config package
 	"github.com/charity254/kaya-backend/internal/database"   //database package
@@ -27,13 +28,17 @@ func main() {
 
 	otpLimiter := middleware.NewRateLimiter(5, 15*time.Minute)
 
-	authRepo := auth.NewRepository(db)
+	authRepo	:= auth.NewRepository(db)
 	authService := auth.NewService(authRepo, cfg.JWTSecret)
 	authHandler := auth.NewHandler(authService, otpLimiter)
 
-	housesRepo := houses.NewRepository(db)
+	housesRepo 	  := houses.NewRepository(db)
 	housesService := houses.NewService(housesRepo)
 	housesHandler := houses.NewHandler(housesService)
+
+	adminRepo 	 := admin.NewRepository(db)
+	adminService := admin.NewService(adminRepo)
+	adminHandler := admin.NewHandler(adminService)
 
 	router := mux.NewRouter()
 
@@ -42,9 +47,11 @@ func main() {
 		w.Write([]byte("Kaya backend running"))
 	}).Methods("GET")
 
+	// Auth routes: phone OTP request and verification
 	router.HandleFunc("/auth/request-otp", authHandler.RequestOTP).Methods("POST")
 	router.HandleFunc("/auth/verify-otp", authHandler.VerifyOTP).Methods("POST")
 
+	// Houses routes:
 	router.HandleFunc("/houses", housesHandler.GetHouses).Methods("GET")
 	router.HandleFunc("/houses/{id}", housesHandler.GetHouseByID).Methods("GET")
 
@@ -52,7 +59,17 @@ func main() {
 	protected := router.PathPrefix("").Subrouter()
 	protected.Use(middleware.AuthMiddleware(cfg.JWTSecret))
 
+	// ─── Admin routes (JWT + admin role required) ──────────────────────
+	adminRouter := router.PathPrefix("/admin").Subrouter()
+	adminRouter.Use(middleware.AuthMiddleware(cfg.JWTSecret))
+	adminRouter.Use(middleware.AdminMiddleware)
 
+	// Admin house management routes
+	adminRouter.HandleFunc("/houses", adminHandler.CreateHouse).Methods("POST")
+	adminRouter.HandleFunc("/houses/{id}", adminHandler.UpdateHouse).Methods("PUT")
+	adminRouter.HandleFunc("/houses/{id}", adminHandler.DeleteHouse).Methods("DELETE")
+
+	// ─── CORS configuration ────────────────────────────────────────────
 	c := cors.New(cors.Options{
     AllowedOrigins: []string{"*"}, // Replace with frontend URL before launch
     AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},

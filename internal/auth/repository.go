@@ -75,15 +75,15 @@ func (r *Repository) MarkOTPUsed(phone string) error {
 }
 
 //GetUserByPhone retrieves a user's id and phone from the database by their phone number
-func (r *Repository) GetUserByPhone(phone string) (string, string, error) {
-	var id, userPhone string
+func (r *Repository) GetUserByPhone(phone string) (string, string, string, error) {
+	var id, userPhone, role string
 	query := `
-	SELECT id, phone FROM users
+	SELECT id, phone, role FROM users
 	WHERE phone = $1
 	`
-	err := r.db.QueryRow(query, phone).Scan(&id, &userPhone)
+	err := r.db.QueryRow(query, phone).Scan(&id, &userPhone, &role)
 	if err != nil {
-		return "", "", fmt.Errorf("User not found: %w", err)
+		return "", "", "", fmt.Errorf("User not found: %w", err)
 	}
-	return id, userPhone, nil
+	return id, userPhone, role, nil
 }

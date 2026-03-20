@@ -64,7 +64,8 @@ Authorization: Bearer YOUR_JWT_TOKEN
     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     "user": {
         "id": "752239d0-1409-449e-a1f5-1f444b47165b",
-        "phone": "254745678901"
+        "phone": "254745678901",
+        "role": "user"
     }
 }
 ```
@@ -133,6 +134,11 @@ Returns a single house object identical to the list items above.
 - `404` — `"house not found"`
 - `500` — Server errors
 
+## Note
+- `exact_location`, `latitude`, `longitude`, `contact_number` are `null` until user pays
+- `is_unlocked: true` means user has paid and sensitive fields are visible
+- Use `limit` and `offset` for pagination
+
 ---
 
 ## Protected Routes
@@ -143,6 +149,69 @@ All routes registered under the protected subrouter require a valid JWT token in
 ```
 Authorization: Bearer <token>
 ```
+
+---
+
+## Admin Routes (Protected)
+
+These routes require both a valid JWT token and that the user's role is `admin`.
+
+### 1. Create a House
+**POST** `/admin/houses`
+
+**Request Body:**
+```json
+{
+  "title": "Stunning Villa",
+  "description": "A very nice 4 br property.",
+  "rent_price": 40000,
+  "general_location": "Westlands",
+  "exact_location": "Plot 42, Off Waiyaki Way",
+  "latitude": -1.261,
+  "longitude": 36.801,
+  "contact_number": "0700111222",
+  "managed_by": "Property Co.",
+  "landmarks": "Near Safaricom HQ",
+  "distance_info": "5km from CBD"
+}
+```
+
+**Success `201`:**
+Returns the complete created house object, including unmasked fields.
+
+**Errors:**
+- `400` — Invalid request body or validation failure
+- `403` — Access denied: admin only
+
+---
+
+### 2. Update a House
+**PUT** `/admin/houses/{id}`
+
+**Request Body:**
+Same as `POST /admin/houses`. Every field must be provided.
+
+**Success `200`:**
+Returns the updated house object.
+
+**Errors:**
+- `404` — House not found
+- `400` — Invalid request body or house ID
+- `403` — Access denied: admin only
+
+---
+
+### 3. Delete a House
+**DELETE** `/admin/houses/{id}`
+
+**Success `200`:**
+```json
+{"message": "house deleted successfully"}
+```
+
+**Errors:**
+- `404` — House not found
+- `403` — Access denied: admin only
 
 Currently, the server is configured to protect routes added to the subrouter in `main.go`.
 

@@ -85,54 +85,55 @@ func (s *Service) RequestOTP(phone string) error {
 
 // VerifyOTP checks if provided OTP is valid for the given phone number
 // returns normalized phone number if valid
-func (s *Service) VerifyOTP(phone, code string) (string, string, string, error) {
+func (s *Service) VerifyOTP(phone, code string) (string, string, string, string, error) {
 	//Normalize phone number first
 	normalizedPhone, err := normalizePhone(phone)
 	if err != nil {
-		return "", "", "", err
+		return "", "", "", "", err
 	}
 
 	//Retrieve stored OTP for this phone number
 	storedCode, expiresAt, err := s.repo.GetOTP(normalizedPhone)
 	if err != nil {
-		return "", "", "", errors.New("OTP not found or already used")
+		return "", "", "", "", errors.New("OTP not found or already used")
 	}
 
 	//Check if the OTP has expired
 	if time.Now().After(expiresAt) {
-		return "", "", "", errors.New("OTP has expired")
+		return "", "", "", "", errors.New("OTP has expired")
 	}
 
 	//Check if provided OTP matches the stored one
 	if code != storedCode {
-		return "", "", "", errors.New("invalid OTP")
+		return "", "", "", "", errors.New("invalid OTP")
 	}
 
 	//Mark the OTP as used so it cannot be reused
 	err = s.repo.MarkOTPUsed(normalizedPhone)
 	if err != nil {
-		return "", "", "", fmt.Errorf("failed to mark OTP as used: %w", err)
+		return "", "", "", "", fmt.Errorf("failed to mark OTP as used: %w", err)
 	}
 
 	//Get the user's id from the database
-	userID, userPhone, err := s.repo.GetUserByPhone(normalizedPhone)
+	userID, userPhone, role,  err := s.repo.GetUserByPhone(normalizedPhone)
 	if err != nil {
-		return "", "", "", fmt.Errorf("failed to get user: %w", err)
+		return "", "", "", "", fmt.Errorf("failed to get user: %w", err)
 	}
 
 	//Generate JWT token for the user
-	token, err := generateJWT(userID, s.jwtSecret)
+	token, err := generateJWT(userID, role, s.jwtSecret)
 	if err != nil {
-		return "", "", "", fmt.Errorf("failed to generate token %w", err)
+		return "", "", "", "", fmt.Errorf("failed to generate token %w", err)
 	}
-	return token, userID, userPhone, nil
+	return token, userID, userPhone, role, nil
 }
 
 //generateJWT creates a signed JWT token for the given user id. The token expires in 24hours and is signed with the JWT secret
-func generateJWT(userID string, jwtSecret string) (string, error) {
+func generateJWT(userID string, role string, jwtSecret string) (string, error) {
 	//Define the claims (data) to store inside the JWT
 	claims := jwt.MapClaims{
 		"user_id": userID,
+		"role": role,
 		"exp": time.Now().Add(24 * time.Hour).Unix(),
 		"iat": time.Now().Unix(),
 	}

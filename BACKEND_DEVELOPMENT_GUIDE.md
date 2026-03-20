@@ -246,12 +246,12 @@ pkg/
 
 ### Step 1.7 — Admin: create and update houses
 
-- [ ] Implement `POST /admin/houses` (admin-only).
+- [x] Implement `POST /admin/houses` (admin-only).
   - Ensure route is protected and caller has admin role (or use separate admin auth).
-- [ ] Request body: title, description, rent_price, general_location, exact_location, latitude, longitude, contact_number, managed_by, landmarks, distance_info.
-- [ ] Validate required fields and types; insert into `houses`; return created house (with id, timestamps).
-- [ ] Implement `PUT /admin/houses/:id` to update existing house; return updated house.
-- [ ] Implement `DELETE /admin/houses/:id` if required (soft delete or hard delete per product decision).
+- [x] Request body: title, description, rent_price, general_location, exact_location, latitude, longitude, contact_number, managed_by, landmarks, distance_info.
+- [x] Validate required fields and types; insert into `houses`; return created house (with id, timestamps).
+- [x] Implement `PUT /admin/houses/:id` to update existing house; return updated house.
+- [x] Implement `DELETE /admin/houses/:id` if required (soft delete or hard delete per product decision).
 
 **Deliverable:** Admin CRUD for houses (at least POST and PUT).
 

@@ -15,6 +15,9 @@ type contextKey string
 //UserIDKey is the key used to store the user id in the request context
 const UserIDKey contextKey = "user_id"
 
+// RoleKey is the key used to store the user role in the request context
+const RoleKey contextKey = "role"
+
 //AuthMiddleware validates the JWT token on protected routes.Extracts user id from the token and adds it to the request context
 func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -22,7 +25,7 @@ func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 			//Extract the token from the Authorization header
 			authHeader := r.Header.Get("Authorization")
 			if authHeader == "" {
-				writeError(w, http.StatusUnauthorized, "Autorization header is required")
+				writeError(w, http.StatusUnauthorized, "Authorization header is required")
 				return
 			}
 			//Check the header has the format "Bearer<token>"
@@ -58,8 +61,13 @@ func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 				writeError(w, http.StatusUnauthorized, "invalid token: user_id not found")
 				return
 			}
-			//add user id to request context so handler can access it
+			role, ok := claims["role"].(string)
+			if !ok {
+				role = "user"
+			}
+			//add user id and role to request context so handler can access it
 			ctx := context.WithValue(r.Context(), UserIDKey, userID)
+			ctx = context.WithValue(ctx, RoleKey, role)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -75,4 +83,9 @@ func writeError(w http.ResponseWriter, status int, message string) {
 func GetUserID(r *http.Request) (string, bool) {
 	userID, ok := r.Context().Value(UserIDKey).(string)
 	return userID, ok
+}
+
+func GetRole(r *http.Request)(string, bool) {
+	role, ok := r.Context().Value(RoleKey).(string)
+	return role, ok
 }
