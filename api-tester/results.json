@@ -1,0 +1,182 @@
+[
+  {
+    "name": "Health Check",
+    "url": "https://kaya-backend-production-beb0.up.railway.app/health",
+    "method": "GET",
+    "timestamp": "2026-03-23T07:38:35.474Z",
+    "checks": [
+      {
+        "type": "status",
+        "passed": true,
+        "message": "Status 200 ✓"
+      }
+    ],
+    "responseBody": null,
+    "passed": true
+  },
+  {
+    "name": "Get all houses",
+    "url": "https://kaya-backend-production-beb0.up.railway.app/houses",
+    "method": "GET",
+    "timestamp": "2026-03-23T07:38:36.602Z",
+    "checks": [
+      {
+        "type": "status",
+        "passed": true,
+        "message": "Status 200 ✓"
+      },
+      {
+        "type": "content-type",
+        "passed": true,
+        "message": "Content-Type OK ✓"
+      },
+      {
+        "type": "fields",
+        "passed": true,
+        "message": "All fields present ✓"
+      }
+    ],
+    "responseBody": {
+      "count": 4,
+      "houses": [
+        {
+          "id": "32c3f45b-8c62-406b-aef2-daae453894ab",
+          "title": "3 Bedroom Apartment in Kilimani",
+          "description": "Spacious 3 bedroom apartment with gym and swimming pool",
+          "rent_price": 45000,
+          "general_location": "Kilimani",
+          "exact_location": null,
+          "latitude": null,
+          "longitude": null,
+          "contact_number": null,
+          "managed_by": "Kilimani Properties",
+          "landmarks": "Near Yaya Centre, close to Nakumatt",
+          "distance_info": "1km from Kilimani junction",
+          "is_unlocked": false,
+          "media": null,
+          "created_at": "2026-03-20T15:43:36.093898Z",
+          "updated_at": "2026-03-20T15:43:36.093898Z"
+        },
+        {
+          "id": "1d577b2c-73be-46e3-8de9-e20221f25dbd",
+          "title": "2 Bedroom Apartment in Westlands",
+          "description": "Modern 2 bedroom apartment with parking and security",
+          "rent_price": 25000,
+          "general_location": "Westlands",
+          "exact_location": null,
+          "latitude": null,
+          "longitude": null,
+          "contact_number": null,
+          "managed_by": "John Properties",
+          "landmarks": "Near Sarit Centre, 5 minutes from ABC Place",
+          "distance_info": "2km from Westlands roundabout",
+          "is_unlocked": false,
+          "media": null,
+          "created_at": "2026-03-18T17:08:58.515777Z",
+          "updated_at": "2026-03-18T17:08:58.515777Z"
+        },
+        {
+          "id": "3840ae6a-32ae-4e41-9a70-1ce6a2ed5daa",
+          "title": "1 Bedroom in Kilimani",
+          "description": "Cozy 1 bedroom apartment, fully furnished",
+          "rent_price": 18000,
+          "general_location": "Kilimani",
+          "exact_location": null,
+          "latitude": null,
+          "longitude": null,
+          "contact_number": null,
+          "managed_by": "Rose Apartments",
+          "landmarks": "Near Yaya Centre, close to Kilimani Primary",
+          "distance_info": "1km from Kilimani junction",
+          "is_unlocked": false,
+          "media": null,
+          "created_at": "2026-03-18T17:08:58.515777Z",
+          "updated_at": "2026-03-18T17:08:58.515777Z"
+        },
+        {
+          "id": "3dcad882-7dc7-48c1-a708-c95669cafe81",
+          "title": "Bedsitter in Ngong Road",
+          "description": "Clean bedsitter with water and electricity included",
+          "rent_price": 8000,
+          "general_location": "Ngong Road",
+          "exact_location": null,
+          "latitude": null,
+          "longitude": null,
+          "contact_number": null,
+          "managed_by": "Ngong Rentals",
+          "landmarks": "Opposite Junction Mall, near Karen",
+          "distance_info": "500m from Junction Mall",
+          "is_unlocked": false,
+          "media": null,
+          "created_at": "2026-03-18T17:08:58.515777Z",
+          "updated_at": "2026-03-18T17:08:58.515777Z"
+        }
+      ]
+    },
+    "passed": true
+  },
+  {
+    "name": "Request OTP",
+    "url": "https://kaya-backend-production-beb0.up.railway.app/auth/request-otp",
+    "method": "POST",
+    "timestamp": "2026-03-23T07:38:39.219Z",
+    "checks": [
+      {
+        "type": "status",
+        "passed": true,
+        "message": "Status 200 ✓"
+      },
+      {
+        "type": "content-type",
+        "passed": true,
+        "message": "Content-Type OK ✓"
+      },
+      {
+        "type": "fields",
+        "passed": true,
+        "message": "All fields present ✓"
+      }
+    ],
+    "responseBody": {
+      "message": "OTP sent successfully"
+    },
+    "passed": true
+  },
+  {
+    "name": "Admin Houses (Unauthorized check)",
+    "url": "https://kaya-backend-production-beb0.up.railway.app/admin/houses",
+    "method": "POST",
+    "timestamp": "2026-03-23T07:38:40.377Z",
+    "checks": [
+      {
+        "type": "status",
+        "passed": true,
+        "message": "Status 401 ✓"
+      },
+      {
+        "type": "fields",
+        "passed": true,
+        "message": "All fields present ✓"
+      }
+    ],
+    "responseBody": {
+      "error": "Authorization header is required"
+    },
+    "passed": true
+  },
+  {
+    "name": "Non-existent route",
+    "url": "https://kaya-backend-production-beb0.up.railway.app/api/missing",
+    "method": "GET",
+    "timestamp": "2026-03-23T07:38:40.766Z",
+    "checks": [
+      {
+        "type": "status",
+        "passed": true,
+        "message": "Status 404 ✓"
+      }
+    ],
+    "responseBody": null,
+    "passed": true
+  }
+]

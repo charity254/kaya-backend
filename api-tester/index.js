@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import { endpoints } from "./endpoints.js";
 import { validateStatus, validateFields, validateContentType } from "./validator.js";
 
@@ -14,10 +15,21 @@ async function runTests() {
 
   let passed = 0;
   let failed = 0;
+  const testResults = [];
 
   for (const ep of endpoints) {
     console.log(`${COLORS.bold}▶ ${ep.name}${COLORS.reset}`);
     console.log(`  ${ep.method} ${ep.url}`);
+
+    const currentResult = {
+      name: ep.name,
+      url: ep.url,
+      method: ep.method,
+      timestamp: new Date().toISOString(),
+      checks: [],
+      responseBody: null,
+      passed: false
+    };
 
     try {
       const res = await fetch(ep.url, {
@@ -26,39 +38,49 @@ async function runTests() {
         body: ep.body ? JSON.stringify(ep.body) : undefined,
       });
 
-      // Handle non-JSON responses by catching errors on .json()
       const body = await res.json().catch(() => null);
-      const results = [];
+      currentResult.responseBody = body;
 
       // 1. Status check
-      results.push(validateStatus(res.status, ep.expectedStatus));
+      const statusRes = validateStatus(res.status, ep.expectedStatus);
+      currentResult.checks.push({ type: "status", ...statusRes });
 
-      // 2. Content-Type check (only for successful JSON responses)
+      // 2. Content-Type check
       if (res.status < 400 && res.headers.get("content-type")?.includes("application/json")) {
-        results.push(validateContentType(res.headers));
+        const ctRes = validateContentType(res.headers);
+        currentResult.checks.push({ type: "content-type", ...ctRes });
       }
 
       // 3. Response body structure check
       if (body && ep.expectedFields?.length > 0) {
-        results.push(validateFields(body, ep.expectedFields));
+        const fieldRes = validateFields(body, ep.expectedFields);
+        currentResult.checks.push({ type: "fields", ...fieldRes });
       }
 
       // Report results
-      const allPassed = results.every((r) => r.passed);
+      const allPassed = currentResult.checks.every((r) => r.passed);
+      currentResult.passed = allPassed;
+      
       allPassed ? passed++ : failed++;
 
-      for (const r of results) {
+      for (const r of currentResult.checks) {
         const color = r.passed ? COLORS.green : COLORS.red;
         console.log(`  ${color}${r.message}${COLORS.reset}`);
       }
     } catch (err) {
       failed++;
+      currentResult.passed = false;
+      currentResult.error = err.message;
       console.log(`  ${COLORS.red}Error: ${err.message} ✗${COLORS.reset}`);
-      console.log(`  ${COLORS.yellow}Make sure your Kaya backend server is running on localhost:8080!${COLORS.reset}`);
     }
 
+    testResults.push(currentResult);
     console.log();
   }
+
+  // Save to file
+  fs.writeFileSync('results.json', JSON.stringify(testResults, null, 2));
+  console.log(`\n${COLORS.yellow}💾 Results saved to results.json${COLORS.reset}\n`);
 
   // Summary
   console.log(`${COLORS.bold}── Summary ──────────────────────────────${COLORS.reset}`);
