@@ -1,0 +1,13 @@
+{
+  "name": "api-tester",
+  "version": "1.0.0",
+  "description": "API endpoint tester for Kaya Backend",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "node index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
