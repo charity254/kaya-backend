@@ -11,19 +11,27 @@ const COLORS = {
 };
 
 async function runTests() {
-  console.log(`\n${COLORS.bold}🚀 Starting Kaya API Endpoint Tests...${COLORS.reset}\n`);
+  const isLocal = process.argv.includes('--local') || process.argv.includes('-l');
+  const baseUrl = isLocal 
+    ? "http://localhost:8080" 
+    : "https://kaya-backend-production-beb0.up.railway.app";
+
+  console.log(`\n${COLORS.bold} Starting Kaya API Endpoint Tests...${COLORS.reset}`);
+  console.log(`  Target Mode: ${COLORS.yellow}${isLocal ? 'LOCAL' : 'PRODUCTION'}${COLORS.reset}`);
+  console.log(`  Base URL:    ${COLORS.yellow}${baseUrl}${COLORS.reset}\n`);
 
   let passed = 0;
   let failed = 0;
   const testResults = [];
 
   for (const ep of endpoints) {
+    const url = `${baseUrl}${ep.path}`;
     console.log(`${COLORS.bold}▶ ${ep.name}${COLORS.reset}`);
-    console.log(`  ${ep.method} ${ep.url}`);
+    console.log(`  ${ep.method} ${url}`);
 
     const currentResult = {
       name: ep.name,
-      url: ep.url,
+      url: url,
       method: ep.method,
       timestamp: new Date().toISOString(),
       checks: [],
@@ -32,7 +40,7 @@ async function runTests() {
     };
 
     try {
-      const res = await fetch(ep.url, {
+      const res = await fetch(url, {
         method: ep.method,
         headers: ep.headers || {},
         body: ep.body ? JSON.stringify(ep.body) : undefined,
@@ -80,7 +88,7 @@ async function runTests() {
 
   // Save to file
   fs.writeFileSync('results.json', JSON.stringify(testResults, null, 2));
-  console.log(`\n${COLORS.yellow}💾 Results saved to results.json${COLORS.reset}\n`);
+  console.log(`\n${COLORS.yellow}Results saved to results.json${COLORS.reset}\n`);
 
   // Summary
   console.log(`${COLORS.bold}── Summary ──────────────────────────────${COLORS.reset}`);
