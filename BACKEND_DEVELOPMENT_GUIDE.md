@@ -294,10 +294,10 @@ pkg/
 
 ### Step 3.1 — M-Pesa Daraja API setup
 
-- [ ] Obtain sandbox (and later production) credentials: Consumer Key, Consumer Secret, Passkey, Shortcode.
-- [ ] Add env vars: `MPESA_CONSUMER_KEY`, `MPESA_CONSUMER_SECRET`, `MPESA_PASSKEY`, `MPESA_SHORTCODE`, and optionally `MPESA_CALLBACK_BASE_URL`.
-- [ ] Implement Daraja OAuth token retrieval (cache token until expiry).
-- [ ] Implement STK Push request builder (amount, phone, reference, callback URL, etc.).
+- [x] Obtain sandbox (and later production) credentials: Consumer Key, Consumer Secret, Passkey, Shortcode.
+- [x] Add env vars: `MPESA_CONSUMER_KEY`, `MPESA_CONSUMER_SECRET`, `MPESA_PASSKEY`, `MPESA_SHORTCODE`, and optionally `MPESA_CALLBACK_BASE_URL`.
+- [x] Implement Daraja OAuth token retrieval (cache token until expiry).
+- [x] Implement STK Push request builder (amount, phone, reference, callback URL, etc.).
 
 **Deliverable:** Config and helper to call Daraja STK Push.
 
@@ -305,14 +305,14 @@ pkg/
 
 ### Step 3.2 — Initiate payment endpoint
 
-- [ ] Implement `POST /payments/initiate`.
-- [ ] Request body: e.g. `{"house_id": "<uuid>", "phone": "254712345678"}`. Phone may be taken from JWT user if same.
-- [ ] Validate house exists and user is authenticated (user_id from JWT).
-- [ ] Check if user already has a successful payment for this house; if yes, return 200 with message "already unlocked" (idempotent).
-- [ ] Create payment row: user_id, house_id, amount (40000 = Ksh 400 in cents if API uses cents, or 400 in KES — align with Daraja), status `pending`.
-- [ ] Call Daraja STK Push with callback URL pointing to your `POST /payments/callback`.
-- [ ] Store Daraja request metadata (e.g. CheckoutRequestID) in payment or separate table if needed for callback matching.
-- [ ] Response: e.g. `{"message": "STK push sent", "payment_id": "<uuid>"}`.
+- [x] Implement `POST /payments/initiate`.
+- [x] Request body: e.g. `{"house_id": "<uuid>", "phone": "254712345678"}`. Phone may be taken from JWT user if same.
+- [x] Validate house exists and user is authenticated (user_id from JWT).
+- [x] Check if user already has a successful payment for this house; if yes, return 200 with message "already unlocked" (idempotent).
+- [x] Create payment row: user_id, house_id, amount (40000 = Ksh 400 in cents if API uses cents, or 400 in KES — align with Daraja), status `pending`.
+- [x] Call Daraja STK Push with callback URL pointing to your `POST /payments/callback`.
+- [x] Store Daraja request metadata (e.g. CheckoutRequestID) in payment or separate table if needed for callback matching.
+- [x] Response: e.g. `{"message": "STK push sent", "payment_id": "<uuid>"}`.
 - [ ] Rate limit: e.g. 10 initiate requests per user per minute.
 
 **Deliverable:** `POST /payments/initiate` that creates pending payment and triggers STK Push.
@@ -321,12 +321,12 @@ pkg/
 
 ### Step 3.3 — Payment callback (Daraja webhook)
 
-- [ ] Implement `POST /payments/callback` (public URL reachable by Safaricom).
-- [ ] Parse Daraja callback payload; extract CheckoutRequestID, ResultCode, MpesaReceiptNumber, etc.
-- [ ] Find payment by CheckoutRequestID (or equivalent); if not found, return 200 anyway to avoid retries (idempotent).
-- [ ] If ResultCode indicates success: update payment to `status = 'paid'`, set `mpesa_receipt`, `transaction_id`; if failure, set `status = 'failed'`.
-- [ ] Make callback idempotent: if payment already `paid`, return 200 without re-applying.
-- [ ] Return 200 with Daraja-expected response body so Safaricom does not retry unnecessarily.
+- [x] Implement `POST /payments/callback` (public URL reachable by Safaricom).
+- [x] Parse Daraja callback payload; extract CheckoutRequestID, ResultCode, MpesaReceiptNumber, etc.
+- [x] Find payment by CheckoutRequestID (or equivalent); if not found, return 200 anyway to avoid retries (idempotent).
+- [x] If ResultCode indicates success: update payment to `status = 'paid'`, set `mpesa_receipt`, `transaction_id`; if failure, set `status = 'failed'`.
+- [x] Make callback idempotent: if payment already `paid`, return 200 without re-applying.
+- [x] Return 200 with Daraja-expected response body so Safaricom does not retry unnecessarily.
 - [ ] Use HTTPS in production; validate callback authenticity if Daraja supports signature verification.
 
 **Deliverable:** `POST /payments/callback` that updates payment and unlocks house for user.
@@ -335,8 +335,8 @@ pkg/
 
 ### Step 3.4 — Unlock logic consistency
 
-- [ ] Ensure `GET /houses` and `GET /houses/:id` use payment table: for authenticated user, if exists payment with user_id, house_id and status `paid`, then return `is_unlocked: true` and include `exact_location`, `contact_number`.
-- [ ] No client-only unlock: frontend must rely on backend response; backend must only unlock after verified payment.
+- [x] Ensure `GET /houses` and `GET /houses/:id` use payment table: for authenticated user, if exists payment with user_id, house_id and status `paid`, then return `is_unlocked: true` and include `exact_location`, `contact_number`.
+- [x] No client-only unlock: frontend must rely on backend response; backend must only unlock after verified payment.
 
 **Deliverable:** Unlock behavior driven solely by backend payment verification.
 

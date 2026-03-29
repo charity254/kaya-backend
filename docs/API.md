@@ -219,6 +219,47 @@ Currently, the server is configured to protect routes added to the subrouter in 
 
 ---
 
+## Payments
+
+### 1. Initiate Payment (STK Push)
+**POST** `/payments/initiate` — **Auth Required**
+
+Initiates an M-PESA STK Push to the user's phone to unlock a specific house.
+
+**Request Body:**
+```json
+{
+  "house_id": "uuid-here",
+  "phone": "254712345678"
+}
+```
+
+**Success `200`:**
+```json
+{
+  "message": "STK push sent. Enter your M-PESA PIN to complete payment",
+  "payment_id": "uuid-here",
+  "status": "pending"
+}
+```
+*(Note: If the house is already unlocked, it returns `status: paid` and a different message).*
+
+### 2. M-PESA Callback Webhook
+**POST** `/payments/callback` — No auth required (Called directly by Safaricom Daraja)
+
+Handles the asynchronous payment success/failure from Safaricom STK Push and unlocks the house automatically upon success.
+
+**Success `200`:**
+Returns exactly what Daraja expects:
+```json
+{
+  "ResultCode": "0",
+  "ResultDesc": "Accepted"
+}
+```
+
+---
+
 ## Notes for Frontend
 - OTP expires after **5 minutes** — show a countdown and allow resend
 - JWT expires after **24 hours** — redirect to login on `401` response

@@ -87,6 +87,10 @@ func (m *MpesaClient) getAccessToken() (string, error) {
 		return "", fmt.Errorf("payments.mpesa.getAccessToken: failed to read response: %w", err)
 	}
 
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("payments.mpesa.getAccessToken: Daraja replied with status %d, body: %s", resp.StatusCode, string(body))
+	}
+
 	//parse response
 	var tokenResp accesTokenResponse
 	if err := json.Unmarshal(body, &tokenResp); err != nil {
@@ -160,6 +164,10 @@ func (m *MpesaClient) InitiateSTKPush(phone string, amount int, houseID string) 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("payments.mpesa.InitiateSTKPush: failed to read response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("payments.mpesa.InitiateSTKPush: Daraja replied with status %d, body: %s", resp.StatusCode, string(body))
 	}
 
 	//parse response
