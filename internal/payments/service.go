@@ -1,6 +1,9 @@
 package payments
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type Service struct {
 	repo 		*Repository
@@ -21,7 +24,9 @@ func (s *Service) InitiatePayment(userID, houseID, phone string) (*Payment, erro
 	}
 	amount := 400
 
-	checkoutRequestID, err := s.mpesaClient.InitiateSTKPush(phone, amount, houseID)
+	normalizedPhone := normalizePhone(phone)
+
+	checkoutRequestID, err := s.mpesaClient.InitiateSTKPush(normalizedPhone, amount, houseID)
 	if err != nil {
 		return nil, fmt.Errorf("payments.service.InitiatePayment: failed to initiate STK push: %w", err)
 	}
@@ -31,6 +36,22 @@ func (s *Service) InitiatePayment(userID, houseID, phone string) (*Payment, erro
 		return nil, fmt.Errorf("payments.servive.InitiatePayment: failed to create payment: %w", err)
 	}
 	return payment, nil
+}
+
+func normalizePhone(phone string) string {
+	// Remove any spaces or hyphens
+	phone = strings.ReplaceAll(phone, " ", "")
+	phone = strings.ReplaceAll(phone, "-", "")
+
+	// Convert 07XXXXXXXX to 2547XXXXXXXX
+	if strings.HasPrefix(phone, "0") {
+		phone = "254" + phone[1:]
+	}
+
+	// Convert +254XXXXXXXXX to 254XXXXXXXXX
+	phone = strings.TrimPrefix(phone, "+")
+
+	return phone
 }
 
 func (s *Service) HandleCallback(checkoutRequestID string, resultCode int, mpesaReceipt string) error {
