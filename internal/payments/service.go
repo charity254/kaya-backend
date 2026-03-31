@@ -25,6 +25,7 @@ func (s *Service) InitiatePayment(userID, houseID, phone string) (*Payment, erro
 	amount := 400
 
 	normalizedPhone := normalizePhone(phone)
+	fmt.Printf("Normalized phone: %s\n", normalizedPhone)
 
 	checkoutRequestID, err := s.mpesaClient.InitiateSTKPush(normalizedPhone, amount, houseID)
 	if err != nil {
