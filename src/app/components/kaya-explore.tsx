@@ -105,7 +105,7 @@ export function KayaExplore({ onHouseClick, onProfileClick, userName }: ExploreP
     const matchesBedrooms =
       selectedBedrooms === "All" ||
       house.bedrooms === parseInt(selectedBedrooms);
-    
+
     return matchesPrice && matchesType && matchesBedrooms;
   });
 
@@ -143,11 +143,10 @@ export function KayaExplore({ onHouseClick, onProfileClick, userName }: ExploreP
             </div>
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`px-4 py-3.5 rounded-xl flex items-center gap-2 transition-colors ${
-                showFilters
+              className={`px-4 py-3.5 rounded-xl flex items-center gap-2 transition-colors ${showFilters
                   ? "bg-primary text-white"
                   : "bg-white border border-border hover:bg-muted"
-              }`}
+                }`}
             >
               <SlidersHorizontal className="w-5 h-5" />
               <span className="hidden sm:inline">Filters</span>
@@ -192,11 +191,10 @@ export function KayaExplore({ onHouseClick, onProfileClick, userName }: ExploreP
                       <button
                         key={type}
                         onClick={() => setSelectedType(type)}
-                        className={`px-4 py-2 rounded-lg transition-colors ${
-                          selectedType === type
+                        className={`px-4 py-2 rounded-lg transition-colors ${selectedType === type
                             ? "bg-primary text-white"
                             : "bg-muted text-foreground hover:bg-muted-foreground/10"
-                        }`}
+                          }`}
                       >
                         {type}
                       </button>
@@ -214,11 +212,10 @@ export function KayaExplore({ onHouseClick, onProfileClick, userName }: ExploreP
                       <button
                         key={bed}
                         onClick={() => setSelectedBedrooms(bed)}
-                        className={`px-4 py-2 rounded-lg transition-colors ${
-                          selectedBedrooms === bed
+                        className={`px-4 py-2 rounded-lg transition-colors ${selectedBedrooms === bed
                             ? "bg-primary text-white"
                             : "bg-muted text-foreground hover:bg-muted-foreground/10"
-                        }`}
+                          }`}
                       >
                         {bed === "All" ? "All" : `${bed} bed`}
                       </button>
