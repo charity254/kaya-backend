@@ -73,6 +73,8 @@ func (r *Repository) GetPaymentByCheckoutRequestID(checkoutRequestID string) (*P
 }
 
 func (r *Repository) UpdatePaymentStatus(checkoutRequestID, status, mpesaReceipt string) error {  //updates the status of a payment after M-Pesa callback. For successful payments it also stores the M-Pesa receipt number
+	fmt.Printf("Updating payment status - CheckoutRequestID: %s, Status: %s\n", checkoutRequestID, status)
+
 	query := `
 		UPDATE payments
 		SET status =$1, mpesa_receipt = $2
