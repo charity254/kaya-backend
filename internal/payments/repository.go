@@ -64,12 +64,14 @@ func (r *Repository) GetPaymentByCheckoutRequestID(checkoutRequestID string) (*P
 		&p.MpesaReceipt, &p.TransactionID, &p.CreatedAt,
 	)
 	if err == sql.ErrNoRows {
+		fmt.Printf("No payment found for CheckoutRequestID: %s\n", checkoutRequestID)
 		return nil, nil ///no payment found
 	}
 	if err != nil {
 		return nil, fmt.Errorf("payments.repository.GetPaymentsByCheckoutRequestID: failed to get payment: %w", err)
 	}
 
+	fmt.Printf("Payment found: %s, status: %s\n", p.ID, p.Status)
 	p.CheckoutRequestID = checkoutRequestID
 	return &p, nil
 }
