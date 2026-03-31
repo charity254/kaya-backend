@@ -46,6 +46,8 @@ func (r *Repository) CreatePayment(userID, houseID, checkoutRequestID string, am
 }
 
 func (r *Repository) GetPaymentByCheckoutRequestID(checkoutRequestID string) (*Payment, error) { //retrieves a payment by its Daraja checkout request ID
+	fmt.Printf("Looking for payment with CheckoutRequestID: %s\n", checkoutRequestID)
+
 	query := `
 		SELECT id, user_id, house_id, amount, status,
 			COALESCE(mpesa, ''),
