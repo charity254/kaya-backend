@@ -1,6 +1,7 @@
 package payments
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"time"
@@ -58,8 +59,11 @@ func (r *Repository) GetPaymentByCheckoutRequestID(checkoutRequestID string) (*P
 		LIMIT 1
 	`
 
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	var p Payment
-	err := r.db.QueryRow(query, checkoutRequestID).Scan(
+	err := r.db.QueryRowContext(ctx, query, checkoutRequestID).Scan(
 		&p.ID, &p.UserID, &p.HouseID, &p.Amount, &p.Status,
 		&p.MpesaReceipt, &p.TransactionID, &p.CreatedAt,
 	)
@@ -68,6 +72,7 @@ func (r *Repository) GetPaymentByCheckoutRequestID(checkoutRequestID string) (*P
 		return nil, nil ///no payment found
 	}
 	if err != nil {
+		fmt.Printf("Error finding payment: %v\n", err)
 		return nil, fmt.Errorf("payments.repository.GetPaymentsByCheckoutRequestID: failed to get payment: %w", err)
 	}
 
