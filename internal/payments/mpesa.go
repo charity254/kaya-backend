@@ -1,6 +1,7 @@
 package payments
 
 import (
+	"crypto/tls"  //REMOVE IN PRODUCTION
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -56,6 +57,23 @@ func NewMpesaClient(consumerKey, consumerSecret, shortcode, passkey, callbackURL
 		baseURL: 		"https://sandbox.safaricom.co.ke",
 	}
 }
+//*************************************************************//
+func (m *MpesaClient) newHTTPClient() *http.Client {
+	if m.baseURL == "https://sandbox.safaricom.co.ke" {
+		// Skip TLS verification for sandbox only
+		transport := &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+		return &http.Client{
+			Timeout:   30 * time.Second,
+			Transport: transport,
+		}
+	}
+	// Production uses normal TLS verification
+	return &http.Client{Timeout: 30 * time.Second}
+}
+
+// *****************************************************************// REMOVE IN PRODUCTION
 
 func (m *MpesaClient) getAccessToken() (string, error) {
 	//build the OAuth URL
@@ -74,7 +92,7 @@ func (m *MpesaClient) getAccessToken() (string, error) {
 	req.Header.Set("Authorization", "Basic " + credentials)
 
 	//send request
-	client := &http.Client{Timeout: 30 * time.Second}
+	client := m.newHTTPClient()
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("payments.mpesa.getAccessToken: failedto send request: %w", err)
@@ -153,7 +171,7 @@ func (m *MpesaClient) InitiateSTKPush(phone string, amount int, houseID string) 
 	req.Header.Set("Content-Type", "application/json")
 
 	//send request
-	client := &http.Client{Timeout: 30 * time.Second}
+	client := m.newHTTPClient()
 	resp, err := client.Do(req)
 	if err != nil {
 		return  "", fmt.Errorf("payments.mpesa.InitiateSTKPush: failed to send request: %w", err)
