@@ -20,7 +20,7 @@ import {
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 
 interface HouseDetailProps {
-  houseId: number;
+  houseId: string;
   onBack: () => void;
 }
 

@@ -3,7 +3,7 @@ import { Search, SlidersHorizontal, MapPin, Bed, X, User } from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 
 interface House {
-  id: number;
+  id: string;
   title: string;
   location: string;
   price: number;
@@ -14,7 +14,7 @@ interface House {
 
 const allHouses: House[] = [
   {
-    id: 1,
+    id: "1",
     title: "Modern 2 Bedroom Apartment",
     location: "Mamboleo, Kisumu",
     price: 25000,
@@ -23,7 +23,7 @@ const allHouses: House[] = [
     image: "https://images.unsplash.com/photo-1764921587475-866c1d48dc48?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400",
   },
   {
-    id: 2,
+    id: "2",
     title: "Spacious 1 Bedroom Studio",
     location: "Milimani, Kisumu",
     price: 18000,
@@ -32,7 +32,7 @@ const allHouses: House[] = [
     image: "https://images.unsplash.com/photo-1507138451611-3001135909fa?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400",
   },
   {
-    id: 3,
+    id: "3",
     title: "Luxury 3 Bedroom Apartment",
     location: "Riat, Kisumu",
     price: 45000,
@@ -41,7 +41,7 @@ const allHouses: House[] = [
     image: "https://images.unsplash.com/photo-1763565909003-46e9dfb68a00?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400",
   },
   {
-    id: 4,
+    id: "4",
     title: "Affordable Bedsitter",
     location: "Kondele, Kisumu",
     price: 8000,
@@ -50,7 +50,7 @@ const allHouses: House[] = [
     image: "https://images.unsplash.com/photo-1749878065837-6968c1805247?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400",
   },
   {
-    id: 5,
+    id: "5",
     title: "Executive 2 Bedroom",
     location: "Nyalenda, Kisumu",
     price: 22000,
@@ -59,7 +59,7 @@ const allHouses: House[] = [
     image: "https://images.unsplash.com/photo-1597497522150-2f50bffea452?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400",
   },
   {
-    id: 6,
+    id: "6",
     title: "Cozy 1 Bedroom Flat",
     location: "Tom Mboya, Kisumu",
     price: 15000,
@@ -68,7 +68,7 @@ const allHouses: House[] = [
     image: "https://images.unsplash.com/photo-1757439402224-56c48352f719?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400",
   },
   {
-    id: 7,
+    id: "7",
     title: "Family 4 Bedroom House",
     location: "Migosi, Kisumu",
     price: 60000,
@@ -77,7 +77,7 @@ const allHouses: House[] = [
     image: "https://images.unsplash.com/photo-1507138451611-3001135909fa?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400",
   },
   {
-    id: 8,
+    id: "8",
     title: "Student Bedsitter",
     location: "Nyalenda, Kisumu",
     price: 6000,
@@ -88,7 +88,7 @@ const allHouses: House[] = [
 ];
 
 interface ExploreProps {
-  onHouseClick: (houseId: number) => void;
+  onHouseClick: (houseId: string) => void;
   onProfileClick: () => void;
   userName: string;
 }

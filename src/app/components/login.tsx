@@ -1,6 +1,6 @@
 import { Mail, Lock, ArrowRight } from "lucide-react";
 import { useState } from "react";
-import logoImage from "figma:asset/3d4d616cfa6766d89f78d048d7489504585944c7.png";
+const logoImage = "https://images.unsplash.com/photo-1599305090598-fe179d501227?w=400&h=100&fit=crop";
 
 interface LoginProps {
   onLogin: () => void;

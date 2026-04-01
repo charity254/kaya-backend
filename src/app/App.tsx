@@ -18,7 +18,7 @@ export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("login");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
-  const [selectedHouseId, setSelectedHouseId] = useState<number | null>(null);
+  const [selectedHouseId, setSelectedHouseId] = useState<string | null>(null);
   const [showProfileSidebar, setShowProfileSidebar] = useState(false);
 
   const handleLogin = (data: UserData) => {
@@ -34,7 +34,7 @@ export default function App() {
     setShowProfileSidebar(false);
   };
 
-  const handleHouseClick = (houseId: number) => {
+  const handleHouseClick = (houseId: string) => {
     setSelectedHouseId(houseId);
     setCurrentScreen("house-detail");
   };
