@@ -35,7 +35,7 @@ type stkPushRequest struct {   //request body for STK push
 	PartyB			  string	`json:"PartyB"` //paybill number
 	PhoneNumber		  string	`json:"PhoneNumber"` //customer phone number
 	CallBackURL		  string	`json:"CallBackURL"` //callback URL
-	AccountReference  string	`json:"AccountReferene"` //account reference
+	AccountReference  string	`json:"AccountReference"` //account reference
 	TransactionDesc	  string	`json:"TransactionDesc"` //transaction description
 }
 
@@ -150,8 +150,10 @@ func (m *MpesaClient) InitiateSTKPush(phone string, amount int, houseID string) 
 		PartyB: 			m.shortcode,
 		PhoneNumber: 		phone,
 		CallBackURL: 		m.callbackURL + "/payments/callback",
-		AccountReference: 	"Kaya-" + houseID,
-		TransactionDesc: 	"Kaya house unlock payment",
+		//AccountReference: 	"Kaya-" + houseID,
+		AccountReference:	"Test",
+		//TransactionDesc: 	"Kaya house unlock payment",
+		TransactionDesc:	"Test",
 	}
 	//payload convert to JSON
 	payloadsBytes, err := json.Marshal(payload)
