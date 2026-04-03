@@ -16,6 +16,7 @@ type Config struct {
 	MpesaShortcode      string // M-Pesa paybill or till number
 	MpesaPasskey        string // Daraja API passkey for STK push
 	MpesaCallbackURL    string // base URL for M-Pesa callbacks
+	SupabaseURL			string
 }
 
 func Load() *Config{
@@ -32,5 +33,6 @@ func Load() *Config{
 		MpesaShortcode:      os.Getenv("MPESA_SHORTCODE"),
 		MpesaPasskey:        os.Getenv("MPESA_PASSKEY"),
 		MpesaCallbackURL:    os.Getenv("MPESA_CALLBACK_BASE_URL"),
+		SupabaseURL: 		 os.Getenv("SUPABASE_URL"),		
 	}
 }

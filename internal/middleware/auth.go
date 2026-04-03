@@ -3,10 +3,10 @@ package middleware
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 
+	"github.com/MicahParks/keyfunc/v3"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -19,67 +19,68 @@ const UserIDKey contextKey = "user_id"
 // RoleKey is the key used to store the user role in the request context
 const RoleKey contextKey = "role"
 
+var jwks keyfunc.Keyfunc
+
+func InitJWKS(supabaseURL string) error {
+    jwksURL := supabaseURL + "/auth/v1/.well-known/jwks.json"
+    k, err := keyfunc.NewDefault([]string{jwksURL})
+    if err != nil {
+        return fmt.Errorf("failed to load JWKS: %w", err)
+    }
+    jwks = k
+    return nil
+}
+
 // AuthMiddleware validates the JWT token on protected routes.Extracts user id from the token and adds it to the request context
-func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			//Extract the token from the Authorization header
-			authHeader := r.Header.Get("Authorization")
-			if authHeader == "" {
-				writeError(w, http.StatusUnauthorized, "Authorization header is required")
-				return
-			}
-			//Check the header has the format "Bearer<token>"
-			parts := strings.Split(authHeader, " ")
-			if len(parts) != 2 || parts[0] != "Bearer" {
-				writeError(w, http.StatusUnauthorized, "authorization header format must be: Bearer <token>")
-				return
-			}
-			//Extract token string from header
-			tokenString := parts[1]
+func AuthMiddleware() func(http.Handler) http.Handler {
+    return func(next http.Handler) http.Handler {
+        return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+            // Extract the token from the Authorization header
+            authHeader := r.Header.Get("Authorization")
+            if authHeader == "" {
+                writeError(w, http.StatusUnauthorized, "Authorization header is required")
+                return
+            }
 
-			//Parse and validate the JWT token
-			token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-				//Ensure token was signed with HMAC and not another method
+            // Check the header has the format "Bearer <token>"
+            parts := strings.Split(authHeader, " ")
+            if len(parts) != 2 || parts[0] != "Bearer" {
+                writeError(w, http.StatusUnauthorized, "authorization header format must be: Bearer <token>")
+                return
+            }
 
-				// if _, ok := token.Method.(*jwt.SigningMethodECDSA); !ok {
-				// 	return nil, jwt.ErrSignatureInvalid
+            tokenString := parts[1]
 
-				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-					return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-				}
-				return []byte(jwtSecret), nil
-			})
-			if err != nil || !token.Valid {
-				log.Printf("JWT validation failed: %v", err)
-				writeError(w, http.StatusUnauthorized, "invalid or expired token-x")
-				return
-			}
-			//Extract the claims(data) from token
-			claims, ok := token.Claims.(jwt.MapClaims)
-			if !ok {
-				writeError(w, http.StatusUnauthorized, "invalid token claims")
-				return
-			}
-			//Get user id from claims
+            // Parse and validate using Supabase's public JWKS (handles ES256)
+            token, err := jwt.Parse(tokenString, jwks.Keyfunc)
+            if err != nil || !token.Valid {
+                writeError(w, http.StatusUnauthorized, "invalid or expired token")
+                return
+            }
 
-			// userID, ok := claims["sub"].(string)
+            claims, ok := token.Claims.(jwt.MapClaims)
+            if !ok {
+                writeError(w, http.StatusUnauthorized, "invalid token claims")
+                return
+            }
 
-			userID, ok := claims["user_id"].(string)
-			if !ok {
-				writeError(w, http.StatusUnauthorized, "invalid token: user_id not found")
-				return
-			}
-			role, ok := claims["role"].(string)
-			if !ok {
-				role = "user"
-			}
-			//add user id and role to request context so handler can access it
-			ctx := context.WithValue(r.Context(), UserIDKey, userID)
-			ctx = context.WithValue(ctx, RoleKey, role)
-			next.ServeHTTP(w, r.WithContext(ctx))
-		})
-	}
+            // Supabase uses "sub" for user ID
+            userID, ok := claims["sub"].(string)
+            if !ok {
+                writeError(w, http.StatusUnauthorized, "invalid token: sub not found")
+                return
+            }
+
+            role, ok := claims["role"].(string)
+            if !ok {
+                role = "user"
+            }
+
+            ctx := context.WithValue(r.Context(), UserIDKey, userID)
+            ctx = context.WithValue(ctx, RoleKey, role)
+            next.ServeHTTP(w, r.WithContext(ctx))
+        })
+    }
 }
 
 func writeError(w http.ResponseWriter, status int, message string) {
