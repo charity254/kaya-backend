@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"strings"
 
@@ -45,6 +46,7 @@ func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 				return []byte(jwtSecret), nil
 			})
 			if err != nil || !token.Valid {
+				log.Printf("JWT validation failed: %v", err)
 				writeError(w, http.StatusUnauthorized, "invalid or expired token-x")
 				return
 			}
