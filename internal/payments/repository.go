@@ -44,8 +44,13 @@ func (r *Repository) CreatePayment(userID, houseID, checkoutRequestID string, am
 	query := `
 		INSERT INTO payments (user_id, house_id, amount, status, transaction_id)
 		VALUES ($1, $2, $3, 'pending', $4)
+		ON CONFLICT (user_id, house_id)
+		DO UPDATE SET
+			status = 'pending',
+			transaction_id = EXCLUDED.transaction_id,
+			amount = EXCLUDED.amount
 		RETURNING id, user_id, house_id, amount, status, created_at
-		`
+	`
 	//use checkoutRequestID as transaction ID
 	var p Payment
 	 err := r.db.QueryRow(query, userID, houseID, amount, checkoutRequestID).Scan(
