@@ -1,11 +1,14 @@
 package middleware
 
 import (
+	"crypto/tls"
 	"context"
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
+	"github.com/MicahParks/jwkset"
 	"github.com/MicahParks/keyfunc/v3"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -23,12 +26,34 @@ var jwks keyfunc.Keyfunc
 
 func InitJWKS(supabaseURL string) error {
     jwksURL := supabaseURL + "/auth/v1/.well-known/jwks.json"
-    k, err := keyfunc.NewDefault([]string{jwksURL})
-    if err != nil {
-        return fmt.Errorf("failed to load JWKS: %w", err)
+
+    httpClient := &http.Client{
+        Transport: &http.Transport{
+            TLSClientConfig: &tls.Config{
+                InsecureSkipVerify: true,
+            },
+        },
     }
-    jwks = k
-    return nil
+
+	// Configure the JWK Set storage with the custom HTTP client
+	storage, err := jwkset.NewStorageFromHTTP(jwksURL, jwkset.HTTPClientStorageOptions{
+		Client:          httpClient,
+		RefreshInterval: time.Hour,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create JWKS storage: %w", err)
+	}
+
+	// Create the Keyfunc using the storage
+	k, err := keyfunc.New(keyfunc.Options{
+		Ctx:     context.Background(),
+		Storage: storage,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to load JWKS: %w", err)
+	}
+	jwks = k
+	return nil
 }
 
 // AuthMiddleware validates the JWT token on protected routes.Extracts user id from the token and adds it to the request context
