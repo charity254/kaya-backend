@@ -110,8 +110,6 @@ func (h *Handler) HandleCallback(w http.ResponseWriter, r *http.Request) { //Han
 	checkoutRequestID := req.Body.StkCallback.CheckoutRequestID
 	resultCode := req.Body.StkCallback.ResultCode
 
-	//fmt.Printf("Callback received - CheckoutRequestID: %s, ResultCode: %d\n", checkoutRequestID, resultCode)
-
 	mpesaReceipt := ""
 	for _, item := range req.Body.StkCallback.CallbackMetadata.Item {
 		if item.Name == "MpesaReceiptNumber" {

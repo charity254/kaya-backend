@@ -47,8 +47,6 @@ func (r *Repository) CreatePayment(userID, houseID, checkoutRequestID string, am
 }
 
 func (r *Repository) GetPaymentByCheckoutRequestID(checkoutRequestID string) (*Payment, error) { //retrieves a payment by its Daraja checkout request ID
-	//fmt.Printf("Looking for payment with CheckoutRequestID: %s\n", checkoutRequestID)
-
 	query := `
 		SELECT id, user_id, house_id, amount, status,
 			COALESCE(mpesa_receipt, ''),
@@ -68,22 +66,17 @@ func (r *Repository) GetPaymentByCheckoutRequestID(checkoutRequestID string) (*P
 		&p.MpesaReceipt, &p.TransactionID, &p.CreatedAt,
 	)
 	if err == sql.ErrNoRows {
-		//fmt.Printf("No payment found for CheckoutRequestID: %s\n", checkoutRequestID)
 		return nil, nil ///no payment found
 	}
 	if err != nil {
-		//fmt.Printf("Error finding payment: %v\n", err)
-		return nil, fmt.Errorf("payments.repository.GetPaymentsByCheckoutRequestID: failed to get payment: %w", err)
+		return nil, fmt.Errorf("payments.repository.GetPaymentByCheckoutRequestID: failed to get payment: %w", err)
 	}
 
-	//fmt.Printf("Payment found: %s, status: %s\n", p.ID, p.Status)
 	p.CheckoutRequestID = checkoutRequestID
 	return &p, nil
 }
 
 func (r *Repository) UpdatePaymentStatus(checkoutRequestID, status, mpesaReceipt string) error {  //updates the status of a payment after M-Pesa callback. For successful payments it also stores the M-Pesa receipt number
-	//fmt.Printf("Updating payment status - CheckoutRequestID: %s, Status: %s\n", checkoutRequestID, status)
-
 	query := `
 		UPDATE payments
 		SET status =$1, mpesa_receipt = $2

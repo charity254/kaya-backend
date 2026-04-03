@@ -1,6 +1,6 @@
 # Kaya API Documentation
 
-Base URL: `https://kaya-backend-production-beb0.up.railway.app`
+Base URL: `https://kaya-xb37.onrender.com`
 
 ---
 
