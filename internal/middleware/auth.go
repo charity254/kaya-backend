@@ -45,7 +45,7 @@ func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 				return []byte(jwtSecret), nil
 			})
 			if err != nil || !token.Valid {
-				writeError(w, http.StatusUnauthorized, "invalid or expired token-y")
+				writeError(w, http.StatusUnauthorized, "invalid or expired token-x")
 				return
 			}
 			//Extract the claims(data) from token
@@ -55,7 +55,7 @@ func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 				return
 			}
 			//Get user id from claims
-			userID, ok := claims["user_id"].(string)
+			userID, ok := claims["sub"].(string)
 			if !ok {
 				writeError(w, http.StatusUnauthorized, "invalid token: user_id not found")
 				return
