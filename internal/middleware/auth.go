@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -40,8 +41,12 @@ func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 			//Parse and validate the JWT token
 			token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 				//Ensure token was signed with HMAC and not another method
-				if _, ok := token.Method.(*jwt.SigningMethodECDSA); !ok {
-					return nil, jwt.ErrSignatureInvalid
+
+				// if _, ok := token.Method.(*jwt.SigningMethodECDSA); !ok {
+				// 	return nil, jwt.ErrSignatureInvalid
+
+				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+					return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 				}
 				return []byte(jwtSecret), nil
 			})
@@ -57,7 +62,10 @@ func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 				return
 			}
 			//Get user id from claims
-			userID, ok := claims["sub"].(string)
+
+			// userID, ok := claims["sub"].(string)
+
+			userID, ok := claims["user_id"].(string)
 			if !ok {
 				writeError(w, http.StatusUnauthorized, "invalid token: user_id not found")
 				return
