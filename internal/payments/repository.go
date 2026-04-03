@@ -27,6 +27,19 @@ type Payment struct {
 	CreatedAt			time.Time
 }
 
+func (r *Repository) EnsureUserExists(userID, phone string) error {
+	query := `
+		INSERT INTO users (id, phone)
+		VALUES ($1, $2)
+		ON CONFLICT (id) DO UPDATE SET phone = $2, updated_at = now()
+		`
+	_, err := r.db.Exec(query, userID, phone)
+	if err != nil {
+		return fmt.Errorf("payments.repository.EnsureUserExists: failed to ensure user exists: %w", err)
+	}
+	return nil
+}
+
 func (r *Repository) CreatePayment(userID, houseID, checkoutRequestID string, amount int) (*Payment, error) {  //Returns the created payment with its generated ID
 	query := `
 		INSERT INTO payments (user_id, house_id, amount, status, transaction_id)

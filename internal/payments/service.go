@@ -33,6 +33,12 @@ func (s *Service) InitiatePayment(userID, houseID, phone string) (*Payment, erro
 		return nil, fmt.Errorf("payments.service.InitiatePayment: failed to initiate STK push: %w", err)
 	}
 
+	// Ensure the user exists in our local database before creating the payment
+	err = s.repo.EnsureUserExists(userID, normalizedPhone)
+	if err != nil {
+		return nil, fmt.Errorf("payments.service.InitiatePayment: failed to ensure user exists: %w", err)
+	}
+
 	payment, err := s.repo.CreatePayment(userID, houseID, checkoutRequestID, amount)
 	if err != nil {
 		log.Printf("payments.service.InitiatePayment: failed to create payment: %v", err)
