@@ -8,20 +8,19 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-//contextKey is a custom type for context keys to avoid collisions with other packages
+// contextKey is a custom type for context keys to avoid collisions with other packages
 type contextKey string
 
-
-//UserIDKey is the key used to store the user id in the request context
+// UserIDKey is the key used to store the user id in the request context
 const UserIDKey contextKey = "user_id"
 
 // RoleKey is the key used to store the user role in the request context
 const RoleKey contextKey = "role"
 
-//AuthMiddleware validates the JWT token on protected routes.Extracts user id from the token and adds it to the request context
+// AuthMiddleware validates the JWT token on protected routes.Extracts user id from the token and adds it to the request context
 func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request){
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			//Extract the token from the Authorization header
 			authHeader := r.Header.Get("Authorization")
 			if authHeader == "" {
@@ -46,8 +45,8 @@ func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 				return []byte(jwtSecret), nil
 			})
 			if err != nil || !token.Valid {
-				writeError(w, http.StatusUnauthorized, "invalid or expired token")
-				return 
+				writeError(w, http.StatusUnauthorized, "invalid or expired token-y")
+				return
 			}
 			//Extract the claims(data) from token
 			claims, ok := token.Claims.(jwt.MapClaims)
@@ -79,13 +78,13 @@ func writeError(w http.ResponseWriter, status int, message string) {
 	w.Write([]byte(`{"error":"` + message + `"}`))
 }
 
-//GetUserId extracts  user id from the request context
+// GetUserId extracts  user id from the request context
 func GetUserID(r *http.Request) (string, bool) {
 	userID, ok := r.Context().Value(UserIDKey).(string)
 	return userID, ok
 }
 
-func GetRole(r *http.Request)(string, bool) {
+func GetRole(r *http.Request) (string, bool) {
 	role, ok := r.Context().Value(RoleKey).(string)
 	return role, ok
 }

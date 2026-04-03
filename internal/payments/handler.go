@@ -2,7 +2,6 @@ package payments
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -28,38 +27,38 @@ func writeError(w http.ResponseWriter, status int, message string) {
 }
 
 type initiatePaymentRequest struct {
-	HouseID	string	`json:"house_id"`
-	Phone	string	`json:"phone"`
+	HouseID string `json:"house_id"`
+	Phone   string `json:"phone"`
 }
 
 type initiatePaymentResponse struct {
-	Message		string	`json:"message"`
-	PaymentID	string	`json:"payment_id"`
-	Status		string	`json:"status"`
+	Message   string `json:"message"`
+	PaymentID string `json:"payment_id"`
+	Status    string `json:"status"`
 }
 
 type callbackRequest struct {
 	Body struct {
 		StkCallback struct {
-			MerchantRequestID	string	`json:"MerchantRequestID"`
-			CheckoutRequestID	string	`json:"CheckoutRequestID"`
-			ResultCode			int		`json:"ResultCode"`
-			ResultDesc			string	`json:"ResultDesc"`  //description
-			CallbackMetadata	struct{
+			MerchantRequestID string `json:"MerchantRequestID"`
+			CheckoutRequestID string `json:"CheckoutRequestID"`
+			ResultCode        int    `json:"ResultCode"`
+			ResultDesc        string `json:"ResultDesc"` //description
+			CallbackMetadata  struct {
 				Item []struct {
-					Name	string		`json:"Name"`
-					Value	interface{}	`json:"Value"`
-				}	`json:"Item"`
-			}	`json:"CallbackMetadata"`
-		}	`json:"stkCallback"`
-	}	`json:"Body"`
+					Name  string      `json:"Name"`
+					Value interface{} `json:"Value"`
+				} `json:"Item"`
+			} `json:"CallbackMetadata"`
+		} `json:"stkCallback"`
+	} `json:"Body"`
 }
 
-func (h *Handler) InitiatePayment(w http.ResponseWriter, r *http.Request) {		// InitiatePayment handles POST /payments/initiate. Requires authentication - user must be logged in
+func (h *Handler) InitiatePayment(w http.ResponseWriter, r *http.Request) { // InitiatePayment handles POST /payments/initiate. Requires authentication - user must be logged in
 	userID, ok := middleware.GetUserID(r)
 	if !ok {
 		writeError(w, http.StatusUnauthorized, "unauthorized")
-		return 
+		return
 	}
 
 	var req initiatePaymentRequest
@@ -87,35 +86,34 @@ func (h *Handler) InitiatePayment(w http.ResponseWriter, r *http.Request) {		// 
 
 	if payment.Status == "paid" {
 		writeJSON(w, http.StatusOK, initiatePaymentResponse{
-			Message: 	"house already unlocked",
-			PaymentID: 	payment.ID,
-			Status: 	payment.Status,
+			Message:   "house already unlocked",
+			PaymentID: payment.ID,
+			Status:    payment.Status,
 		})
 		return
 	}
 
 	writeJSON(w, http.StatusOK, initiatePaymentResponse{
-		Message: 	"STK push sent. Enter your M-PESA PIN to complete payment",
-		PaymentID: 	payment.ID,
-		Status: 	payment.Status,	
+		Message:   "STK push sent. Enter your M-PESA PIN to complete payment",
+		PaymentID: payment.ID,
+		Status:    payment.Status,
 	})
 }
 
-func (h *Handler) HandleCallback(w http.ResponseWriter, r *http.Request) {  //HandleCallback handles POST /payments/callback
+func (h *Handler) HandleCallback(w http.ResponseWriter, r *http.Request) { //HandleCallback handles POST /payments/callback
 	var req callbackRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSON(w, http.StatusOK, map[string]string{"ResultCode": "0", "ResultDesc": "Accepted"})
 		return
 	}
 
-	checkoutRequestID 	:= req.Body.StkCallback.CheckoutRequestID
-	resultCode 			:= req.Body.StkCallback.ResultCode
+	checkoutRequestID := req.Body.StkCallback.CheckoutRequestID
+	resultCode := req.Body.StkCallback.ResultCode
 
-	fmt.Printf("Callback received - CheckoutRequestID: %s, ResultCode: %d\n", checkoutRequestID, resultCode)
-
+	//fmt.Printf("Callback received - CheckoutRequestID: %s, ResultCode: %d\n", checkoutRequestID, resultCode)
 
 	mpesaReceipt := ""
-	for _, item := range req.Body.StkCallback.CallbackMetadata.Item{
+	for _, item := range req.Body.StkCallback.CallbackMetadata.Item {
 		if item.Name == "MpesaReceiptNumber" {
 			if receipt, ok := item.Value.(string); ok {
 				mpesaReceipt = receipt
