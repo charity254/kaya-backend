@@ -44,6 +44,7 @@ func (s *Service) InitiatePayment(userID, houseID, phone string) (*Payment, erro
 		log.Printf("payments.service.InitiatePayment: failed to create payment: %v", err)
 		return nil, fmt.Errorf("payments.service.InitiatePayment: failed to create payment: %w", err)
 	}
+	fmt.Println(payment)
 	return payment, nil
 }
 
