@@ -39,7 +39,7 @@ func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 			//Parse and validate the JWT token
 			token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 				//Ensure token was signed with HMAC and not another method
-				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				if _, ok := token.Method.(*jwt.SigningMethodECDSA); !ok {
 					return nil, jwt.ErrSignatureInvalid
 				}
 				return []byte(jwtSecret), nil
