@@ -2,6 +2,7 @@ package payments
 
 import (
 	"fmt"
+	"log"
 	"strings"
 )
 
@@ -34,7 +35,8 @@ func (s *Service) InitiatePayment(userID, houseID, phone string) (*Payment, erro
 
 	payment, err := s.repo.CreatePayment(userID, houseID, checkoutRequestID, amount)
 	if err != nil {
-		return nil, fmt.Errorf("payments.servive.InitiatePayment: failed to create payment: %w", err)
+		log.Printf("payments.service.InitiatePayment: failed to create payment: %v", err)
+		return nil, fmt.Errorf("payments.service.InitiatePayment: failed to create payment: %w", err)
 	}
 	return payment, nil
 }
