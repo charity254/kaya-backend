@@ -23,7 +23,7 @@ func (s *Service) InitiatePayment(userID, houseID, phone string) (*Payment, erro
 	if existingPayment != nil && existingPayment.Status == "paid" {
 		return existingPayment, nil
 	}
-	amount := 400
+	amount := 1
 
 	normalizedPhone := normalizePhone(phone)
 
