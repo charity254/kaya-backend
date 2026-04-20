@@ -24,9 +24,6 @@ func main() {
 		port = "8080"
 	}
 
-	if err := middleware.InitJWKS(cfg.SupabaseURL); err != nil {
-        log.Fatal("Failed to load Supabase JWKS: ", err)
-    }
 
 	db := database.Connect(cfg.DBUrl)
 	defer db.Close()
@@ -81,16 +78,18 @@ func main() {
 
 	//protected routes (JWT authentication required). Every request to this routes must have a valid JWT  token
 	protected := router.PathPrefix("").Subrouter()
-	protected.Use(middleware.AuthMiddleware())
+	protected.Use(middleware.AuthMiddleware(cfg.JWTSecret))
 
 	protected.HandleFunc("/payments/initiate", paymentsHandler.InitiatePayment).Methods("POST")
 
 	// ─── Admin routes (JWT + admin role required) ──────────────────────
 	adminRouter := router.PathPrefix("/admin").Subrouter()
-	adminRouter.Use(middleware.AuthMiddleware())
+	adminRouter.Use(middleware.AuthMiddleware(cfg.JWTSecret))
 	adminRouter.Use(middleware.AdminMiddleware)
 
 	// Admin house management routes
+	adminRouter.HandleFunc("/houses", adminHandler.GetHouses).Methods("GET")
+	adminRouter.HandleFunc("/houses/{id}", adminHandler.GetHouseByID).Methods("GET")
 	adminRouter.HandleFunc("/houses", adminHandler.CreateHouse).Methods("POST")
 	adminRouter.HandleFunc("/houses/{id}", adminHandler.UpdateHouse).Methods("PUT")
 	adminRouter.HandleFunc("/houses/{id}", adminHandler.DeleteHouse).Methods("DELETE")

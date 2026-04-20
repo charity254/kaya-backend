@@ -1,15 +1,10 @@
 package middleware
 
 import (
-	"crypto/tls"
 	"context"
-	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
-	"github.com/MicahParks/jwkset"
-	"github.com/MicahParks/keyfunc/v3"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -22,104 +17,86 @@ const UserIDKey contextKey = "user_id"
 // RoleKey is the key used to store the user role in the request context
 const RoleKey contextKey = "role"
 
-var jwks keyfunc.Keyfunc
+// AuthMiddleware validates the JWT token on protected routes
+// It extracts the user id and role from the token and adds them to the request context
+func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Get the Authorization header from the request
+			authHeader := r.Header.Get("Authorization")
+			if authHeader == "" {
+				writeError(w, http.StatusUnauthorized, "authorization header is required")
+				return
+			}
 
-func InitJWKS(supabaseURL string) error {
-    jwksURL := supabaseURL + "/auth/v1/.well-known/jwks.json"
+			// Check that the header has the format "Bearer <token>"
+			parts := strings.Split(authHeader, " ")
+			if len(parts) != 2 || parts[0] != "Bearer" {
+				writeError(w, http.StatusUnauthorized, "authorization header format must be: Bearer <token>")
+				return
+			}
 
-    httpClient := &http.Client{
-        Transport: &http.Transport{
-            TLSClientConfig: &tls.Config{
-                InsecureSkipVerify: true,
-            },
-        },
-    }
+			// Extract the token string from the header
+			tokenString := parts[1]
 
-	// Configure the JWK Set storage with the custom HTTP client
-	storage, err := jwkset.NewStorageFromHTTP(jwksURL, jwkset.HTTPClientStorageOptions{
-		Client:          httpClient,
-		RefreshInterval: time.Hour,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to create JWKS storage: %w", err)
+			// Parse and validate the JWT token using our secret
+			token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+				// Make sure the token was signed with HMAC and not another method
+				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+					return nil, jwt.ErrSignatureInvalid
+				}
+				return []byte(jwtSecret), nil
+			})
+
+			if err != nil || !token.Valid {
+				writeError(w, http.StatusUnauthorized, "invalid or expired token")
+				return
+			}
+
+			// Extract the claims (data) from the token
+			claims, ok := token.Claims.(jwt.MapClaims)
+			if !ok {
+				writeError(w, http.StatusUnauthorized, "invalid token claims")
+				return
+			}
+
+			// Get the user id from the claims
+			userID, ok := claims["user_id"].(string)
+			if !ok {
+				writeError(w, http.StatusUnauthorized, "invalid token: user_id not found")
+				return
+			}
+
+			// Extract the role from the claims
+			role, ok := claims["role"].(string)
+			if !ok {
+				role = "user" // default to user role if not found
+			}
+
+			// Add the user id and role to the request context
+			ctx := context.WithValue(r.Context(), UserIDKey, userID)
+			ctx = context.WithValue(ctx, RoleKey, role)
+
+			// Pass the request to the next handler with the updated context
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
 	}
-
-	// Create the Keyfunc using the storage
-	k, err := keyfunc.New(keyfunc.Options{
-		Ctx:     context.Background(),
-		Storage: storage,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to load JWKS: %w", err)
-	}
-	jwks = k
-	return nil
 }
 
-// AuthMiddleware validates the JWT token on protected routes.Extracts user id from the token and adds it to the request context
-func AuthMiddleware() func(http.Handler) http.Handler {
-    return func(next http.Handler) http.Handler {
-        return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-            // Extract the token from the Authorization header
-            authHeader := r.Header.Get("Authorization")
-            if authHeader == "" {
-                writeError(w, http.StatusUnauthorized, "Authorization header is required")
-                return
-            }
-
-            // Check the header has the format "Bearer <token>"
-            parts := strings.Split(authHeader, " ")
-            if len(parts) != 2 || parts[0] != "Bearer" {
-                writeError(w, http.StatusUnauthorized, "authorization header format must be: Bearer <token>")
-                return
-            }
-
-            tokenString := parts[1]
-
-            // Parse and validate using Supabase's public JWKS (handles ES256)
-            token, err := jwt.Parse(tokenString, jwks.Keyfunc)
-            if err != nil || !token.Valid {
-                writeError(w, http.StatusUnauthorized, "invalid or expired token")
-                return
-            }
-
-            claims, ok := token.Claims.(jwt.MapClaims)
-            if !ok {
-                writeError(w, http.StatusUnauthorized, "invalid token claims")
-                return
-            }
-
-            // Supabase uses "sub" for user ID
-            userID, ok := claims["sub"].(string)
-            if !ok {
-                writeError(w, http.StatusUnauthorized, "invalid token: sub not found")
-                return
-            }
-
-            role, ok := claims["role"].(string)
-            if !ok {
-                role = "user"
-            }
-
-            ctx := context.WithValue(r.Context(), UserIDKey, userID)
-            ctx = context.WithValue(ctx, RoleKey, role)
-            next.ServeHTTP(w, r.WithContext(ctx))
-        })
-    }
-}
-
+// writeError writes a JSON error response with the given status code
 func writeError(w http.ResponseWriter, status int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	w.Write([]byte(`{"error":"` + message + `"}`))
 }
 
-// GetUserId extracts  user id from the request context
+// GetUserID extracts the user id from the request context
 func GetUserID(r *http.Request) (string, bool) {
 	userID, ok := r.Context().Value(UserIDKey).(string)
 	return userID, ok
 }
 
+// GetRole extracts the user role from the request context
 func GetRole(r *http.Request) (string, bool) {
 	role, ok := r.Context().Value(RoleKey).(string)
 	return role, ok

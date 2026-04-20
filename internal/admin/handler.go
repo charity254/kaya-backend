@@ -122,3 +122,55 @@ func (h *Handler) DeleteHouse(w http.ResponseWriter, r *http.Request) { //DELETE
 		"message":"house deleted successfully",
 	})
 }
+
+// GetHouses handles GET /admin/houses
+// Returns all houses with no masking - admin only
+func (h *Handler) GetHouses(w http.ResponseWriter, r *http.Request) {
+	// Call the service to get all houses
+	houses, err := h.service.GetHouses()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to get houses")
+		return
+	}
+
+	// Return empty array instead of null if no houses found
+	if houses == nil {
+		houses = []HouseResult{}
+	}
+
+	// Return all houses with full details - no masking
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"houses": houses,
+		"count":  len(houses),
+	})
+}
+
+// GetHouseByID handles GET /admin/houses/{id}
+// Returns a single house with no masking - admin only
+func (h *Handler) GetHouseByID(w http.ResponseWriter, r *http.Request) {
+	// Extract the house ID from the URL path parameters
+	vars := mux.Vars(r)
+	id := vars["id"]
+
+	// Validate that an ID was provided
+	if id == "" {
+		writeError(w, http.StatusBadRequest, "house ID is required")
+		return
+	}
+
+	// Call the service to get the house
+	house, err := h.service.GetHouseByID(id)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to get house")
+		return
+	}
+
+	// Return 404 if house not found
+	if house == nil {
+		writeError(w, http.StatusNotFound, "house not found")
+		return
+	}
+
+	// Return the house with full details - no masking
+	writeJSON(w, http.StatusOK, house)
+}

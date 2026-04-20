@@ -59,3 +59,27 @@ func (s *Service) DeleteHouse(id string) (bool, error) {
 	}
 	return deleted, nil
 }
+// GetHouses retrieves all house listings for admin view
+// No masking applied - admin sees all details
+func (s *Service) GetHouses() ([]HouseResult, error) {
+	houses, err := s.repo.GetHouses()
+	if err != nil {
+		return nil, fmt.Errorf("admin.service.GetHouses: failed to get houses: %w", err)
+	}
+	return houses, nil
+}
+
+// GetHouseByID retrieves a single house by ID for admin view
+// No masking applied - admin sees all details
+// Returns nil if house not found
+func (s *Service) GetHouseByID(id string) (*HouseResult, error) {
+	if id == "" {
+		return nil, fmt.Errorf("house ID is required")
+	}
+
+	house, err := s.repo.GetHouseByID(id)
+	if err != nil {
+		return nil, fmt.Errorf("admin.service.GetHouseByID: failed to get house: %w", err)
+	}
+	return house, nil
+}
