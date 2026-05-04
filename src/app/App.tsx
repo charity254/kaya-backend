@@ -1,17 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { KayaLogin } from "./components/kaya-login";
 import { KayaDashboard } from "./components/kaya-dashboard";
 import { KayaHouseDetail } from "./components/kaya-house-detail";
 import { KayaExplore } from "./components/kaya-explore";
 import { KayaProfileSidebar } from "./components/kaya-profile-sidebar";
+import { clearAuth } from "./lib/api";
 import { Home, Compass } from "lucide-react";
 
 type Screen = "login" | "dashboard" | "explore" | "house-detail";
 
-interface UserData {
-  name: string;
-  email: string;
+export interface UserData {
+  id: string;
   phone: string;
+  token: string;
 }
 
 export default function App() {
@@ -21,6 +22,23 @@ export default function App() {
   const [selectedHouseId, setSelectedHouseId] = useState<string | null>(null);
   const [showProfileSidebar, setShowProfileSidebar] = useState(false);
 
+  // Restore session from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem("kaya_user");
+    if (stored) {
+      try {
+        const parsed: UserData = JSON.parse(stored);
+        if (parsed.token && parsed.id && parsed.phone) {
+          setUserData(parsed);
+          setIsLoggedIn(true);
+          setCurrentScreen("dashboard");
+        }
+      } catch {
+        clearAuth();
+      }
+    }
+  }, []);
+
   const handleLogin = (data: UserData) => {
     setUserData(data);
     setIsLoggedIn(true);
@@ -28,6 +46,7 @@ export default function App() {
   };
 
   const handleLogout = () => {
+    clearAuth();
     setIsLoggedIn(false);
     setUserData(null);
     setCurrentScreen("login");
@@ -54,12 +73,11 @@ export default function App() {
 
   return (
     <div className="size-full">
-      {/* Main Content */}
       {currentScreen === "dashboard" && userData && (
         <KayaDashboard
           onHouseClick={handleHouseClick}
           onProfileClick={() => setShowProfileSidebar(true)}
-          userName={userData.name}
+          userName={userData.phone}
         />
       )}
 
@@ -67,7 +85,7 @@ export default function App() {
         <KayaExplore
           onHouseClick={handleHouseClick}
           onProfileClick={() => setShowProfileSidebar(true)}
-          userName={userData.name}
+          userName={userData.phone}
         />
       )}
 
@@ -75,7 +93,6 @@ export default function App() {
         <KayaHouseDetail houseId={selectedHouseId} onBack={handleBackToDashboard} />
       )}
 
-      {/* Bottom Navigation */}
       {currentScreen !== "house-detail" && (
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-border shadow-lg z-30">
           <div className="max-w-md mx-auto flex items-center justify-around px-6 py-3">
@@ -106,7 +123,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Profile Sidebar */}
       {userData && (
         <KayaProfileSidebar
           isOpen={showProfileSidebar}
