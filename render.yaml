@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: kaya-frontend
+    env: static
+    buildCommand: npm run build
+    staticPublishPath: ./dist
+    headers:
+      - path: /assets/*
+        name: Content-Type
+        value: text/css
