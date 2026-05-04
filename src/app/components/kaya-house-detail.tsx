@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   ArrowLeft,
   MapPin,
@@ -10,14 +10,59 @@ import {
   Droplet,
   Zap,
   ShieldCheck,
-  Play,
   ChevronLeft,
   ChevronRight,
   Lock,
   Phone,
   Navigation,
+  Loader2,
+  AlertCircle,
+  CheckCircle2,
 } from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
+import { apiGet, apiPost } from "../lib/api";
+
+interface MediaItem {
+  id: string;
+  media_url: string;
+  media_type: string;
+}
+
+interface HouseDetail {
+  id: string;
+  title: string;
+  description: string;
+  rent_price: number;
+  general_location: string;
+  exact_location: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  contact_number: string | null;
+  managed_by: string;
+  landmarks: string;
+  distance_info: string;
+  is_unlocked: boolean;
+  media: MediaItem[] | null;
+}
+
+interface InitiatePaymentResponse {
+  message: string;
+  payment_id: string;
+  status: string;
+}
+
+const FALLBACK_IMAGES = [
+  "https://images.unsplash.com/photo-1764921587475-866c1d48dc48?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=800",
+  "https://images.unsplash.com/photo-1749878065837-6968c1805247?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=800",
+  "https://images.unsplash.com/photo-1597497522150-2f50bffea452?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=800",
+  "https://images.unsplash.com/photo-1763565909003-46e9dfb68a00?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=800",
+  "https://images.unsplash.com/photo-1757439402224-56c48352f719?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=800",
+];
+
+function getBedroomsFromTitle(title: string): number {
+  const match = title.match(/(\d+)\s*bedroom/i);
+  return match ? parseInt(match[1]) : 1;
+}
 
 interface HouseDetailProps {
   houseId: string;
@@ -25,74 +70,138 @@ interface HouseDetailProps {
 }
 
 export function KayaHouseDetail({ houseId, onBack }: HouseDetailProps) {
+  const [house, setHouse] = useState<HouseDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  // Payment modal state
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [isPaid, setIsPaid] = useState(false);
-  const [otp, setOtp] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [showOtpInput, setShowOtpInput] = useState(false);
+  const [paymentPhone, setPaymentPhone] = useState("");
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [stkSent, setStkSent] = useState(false);
+  const [polling, setPolling] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollCountRef = useRef(0);
 
-  // Mock house data
-  const house = {
-    id: houseId,
-    title: "Modern 2 Bedroom Apartment",
-    location: "Mamboleo, Kisumu",
-    exactLocation: "Plot 245, Mamboleo Estate, Near Kisumu Boys High School",
-    coordinates: { lat: -0.0917, lng: 34.7680 },
-    price: 25000,
-    bedrooms: 2,
-    bathrooms: 1,
-    type: "Apartment",
-    managedBy: "Owner",
-    contactPerson: "+254 712 345 678",
-    contactName: "Jane Akinyi",
-    images: [
-      "https://images.unsplash.com/photo-1764921587475-866c1d48dc48?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=800",
-      "https://images.unsplash.com/photo-1749878065837-6968c1805247?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=800",
-      "https://images.unsplash.com/photo-1597497522150-2f50bffea452?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=800",
-      "https://images.unsplash.com/photo-1763565909003-46e9dfb68a00?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=800",
-      "https://images.unsplash.com/photo-1757439402224-56c48352f719?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=800",
-    ],
-    videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
-    amenities: [
-      { icon: Wifi, label: "Wi-Fi Ready" },
-      { icon: Droplet, label: "Water 24/7" },
-      { icon: Zap, label: "Backup Generator" },
-      { icon: Car, label: "Parking Space" },
-      { icon: ShieldCheck, label: "Secure Compound" },
-      { icon: Sofa, label: "Furnished" },
-    ],
-    landmarks: [
-      { name: "Kisumu Boys High School", distance: "500m" },
-      { name: "Tuskys Supermarket", distance: "1.2km" },
-      { name: "Kisumu Airport", distance: "8km" },
-      { name: "Kisumu CBD", distance: "4km" },
-    ],
-    description: "Beautiful 2-bedroom apartment in a secure compound. Perfect for small families or professionals. The house features modern finishes, ample natural lighting, and 24/7 water supply. Located in a quiet neighborhood with easy access to major amenities.",
-  };
-
-  const handlePayment = () => {
-    if (!phoneNumber) return;
-    // Mock: Send OTP
-    setShowOtpInput(true);
-  };
-
-  const handleVerifyOtp = () => {
-    if (otp === "1234") { // Mock OTP verification
-      setIsPaid(true);
-      setShowPaymentModal(false);
-    } else {
-      alert("Invalid OTP. Try 1234 for demo");
+  const fetchHouse = async () => {
+    try {
+      const data = await apiGet<HouseDetail>(`/houses/${houseId}`);
+      setHouse(data);
+      return data;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load property");
+      return null;
     }
   };
 
-  const nextImage = () => {
-    setCurrentImageIndex((prev) => (prev + 1) % house.images.length);
+  useEffect(() => {
+    setLoading(true);
+    fetchHouse().finally(() => setLoading(false));
+  }, [houseId]);
+
+  // Stop polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
+
+  const startPolling = () => {
+    pollCountRef.current = 0;
+    setPolling(true);
+    pollRef.current = setInterval(async () => {
+      pollCountRef.current += 1;
+      const data = await fetchHouse();
+      if (data?.is_unlocked) {
+        stopPolling();
+        setShowPaymentModal(false);
+      } else if (pollCountRef.current >= 30) {
+        // ~90 seconds (30 × 3s)
+        stopPolling();
+      }
+    }, 3000);
   };
 
-  const prevImage = () => {
-    setCurrentImageIndex((prev) => (prev - 1 + house.images.length) % house.images.length);
+  const stopPolling = () => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+    setPolling(false);
   };
+
+  const handleInitiatePayment = async () => {
+    if (!paymentPhone || !house) return;
+    setPaymentError(null);
+    setPaymentLoading(true);
+    try {
+      const res = await apiPost<InitiatePaymentResponse>("/payments/initiate", {
+        house_id: house.id,
+        phone: paymentPhone,
+      });
+      if (res.status === "paid") {
+        // Already paid — refresh house data
+        await fetchHouse();
+        setShowPaymentModal(false);
+      } else {
+        setStkSent(true);
+        startPolling();
+      }
+    } catch (err) {
+      setPaymentError(err instanceof Error ? err.message : "Failed to initiate payment");
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  const handleCloseModal = () => {
+    stopPolling();
+    setShowPaymentModal(false);
+    setStkSent(false);
+    setPaymentPhone("");
+    setPaymentError(null);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4 text-muted-foreground">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <p className="text-sm">Loading property...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !house) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <AlertCircle className="w-10 h-10 text-destructive" />
+          <p className="text-sm text-muted-foreground">{error ?? "Property not found"}</p>
+          <button onClick={onBack} className="px-4 py-2 bg-primary text-white rounded-lg text-sm">
+            Back to listings
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const images = house.media?.filter((m) => m.media_type === "image").map((m) => m.media_url) ?? [];
+  const videoUrl = house.media?.find((m) => m.media_type === "video")?.media_url ?? null;
+  const displayImages = images.length > 0 ? images : FALLBACK_IMAGES;
+  const bedrooms = getBedroomsFromTitle(house.title);
+
+  const staticAmenities = [
+    { icon: Wifi, label: "Wi-Fi Ready" },
+    { icon: Droplet, label: "Water 24/7" },
+    { icon: Zap, label: "Backup Power" },
+    { icon: Car, label: "Parking Space" },
+    { icon: ShieldCheck, label: "Secure Compound" },
+    { icon: Sofa, label: "Lounge Area" },
+  ];
 
   return (
     <div className="min-h-screen bg-background pb-8">
@@ -114,34 +223,29 @@ export function KayaHouseDetail({ houseId, onBack }: HouseDetailProps) {
         <div className="mb-8">
           <div className="relative aspect-video bg-muted rounded-2xl overflow-hidden mb-4">
             <ImageWithFallback
-              src={house.images[currentImageIndex]}
+              src={displayImages[currentImageIndex]}
               alt={house.title}
               className="w-full h-full object-cover"
             />
-            
-            {/* Navigation Arrows */}
             <button
-              onClick={prevImage}
+              onClick={() => setCurrentImageIndex((p) => (p - 1 + displayImages.length) % displayImages.length)}
               className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-colors"
             >
               <ChevronLeft className="w-6 h-6" />
             </button>
             <button
-              onClick={nextImage}
+              onClick={() => setCurrentImageIndex((p) => (p + 1) % displayImages.length)}
               className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-colors"
             >
               <ChevronRight className="w-6 h-6" />
             </button>
-
-            {/* Image Counter */}
             <div className="absolute bottom-4 right-4 px-3 py-1.5 bg-black/60 backdrop-blur-sm text-white text-sm rounded-full">
-              {currentImageIndex + 1} / {house.images.length}
+              {currentImageIndex + 1} / {displayImages.length}
             </div>
           </div>
 
-          {/* Thumbnail Grid */}
           <div className="grid grid-cols-5 gap-2">
-            {house.images.map((image, index) => (
+            {displayImages.map((image, index) => (
               <button
                 key={index}
                 onClick={() => setCurrentImageIndex(index)}
@@ -151,40 +255,23 @@ export function KayaHouseDetail({ houseId, onBack }: HouseDetailProps) {
                     : "border-transparent hover:border-muted-foreground/30"
                 }`}
               >
-                <ImageWithFallback
-                  src={image}
-                  alt={`View ${index + 1}`}
-                  className="w-full h-full object-cover"
-                />
+                <ImageWithFallback src={image} alt={`View ${index + 1}`} className="w-full h-full object-cover" />
               </button>
             ))}
           </div>
         </div>
 
-        {/* Virtual Tour Video */}
-        <div className="mb-8 bg-white rounded-2xl p-6 border border-border">
-          <div className="flex items-center gap-2 mb-4">
-            <Play className="w-5 h-5 text-primary" />
-            <h3 className="text-foreground">Virtual Walkthrough Tour</h3>
+        {/* Video Tour */}
+        {videoUrl && (
+          <div className="mb-8 bg-white rounded-2xl p-6 border border-border">
+            <h3 className="text-foreground mb-4">Virtual Walkthrough</h3>
+            <div className="aspect-video bg-muted rounded-xl overflow-hidden">
+              <video src={videoUrl} controls className="w-full h-full" />
+            </div>
           </div>
-          <div className="aspect-video bg-muted rounded-xl overflow-hidden">
-            <iframe
-              width="100%"
-              height="100%"
-              src={house.videoUrl}
-              title="Virtual Tour"
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              className="w-full h-full"
-            ></iframe>
-          </div>
-          <p className="text-sm text-muted-foreground mt-3">
-            Watch a complete 360° virtual tour of the property
-          </p>
-        </div>
+        )}
 
-        {/* House Details */}
+        {/* Details grid */}
         <div className="grid lg:grid-cols-3 gap-6 mb-8">
           <div className="lg:col-span-2 space-y-6">
             {/* Title and Price */}
@@ -192,10 +279,13 @@ export function KayaHouseDetail({ houseId, onBack }: HouseDetailProps) {
               <h1 className="text-3xl text-foreground mb-2">{house.title}</h1>
               <div className="flex items-center gap-2 text-muted-foreground mb-4">
                 <MapPin className="w-5 h-5" />
-                <span>{house.location}</span>
+                <span>{house.general_location}</span>
               </div>
+              {house.distance_info && (
+                <p className="text-sm text-muted-foreground mb-4 pl-7">{house.distance_info}</p>
+              )}
               <div className="flex items-baseline gap-2">
-                <span className="text-4xl text-primary">KSh {house.price.toLocaleString()}</span>
+                <span className="text-4xl text-primary">KSh {house.rent_price.toLocaleString()}</span>
                 <span className="text-muted-foreground">/ month</span>
               </div>
             </div>
@@ -212,13 +302,13 @@ export function KayaHouseDetail({ houseId, onBack }: HouseDetailProps) {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 <div className="flex items-center gap-2">
                   <Bed className="w-5 h-5 text-primary" />
-                  <span className="text-sm">{house.bedrooms} Bedrooms</span>
+                  <span className="text-sm">{bedrooms} {bedrooms === 1 ? "Bedroom" : "Bedrooms"}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Bath className="w-5 h-5 text-primary" />
-                  <span className="text-sm">{house.bathrooms} Bathroom</span>
+                  <span className="text-sm">Bathroom</span>
                 </div>
-                {house.amenities.map((amenity, index) => (
+                {staticAmenities.map((amenity, index) => (
                   <div key={index} className="flex items-center gap-2">
                     <amenity.icon className="w-5 h-5 text-primary" />
                     <span className="text-sm">{amenity.label}</span>
@@ -228,105 +318,93 @@ export function KayaHouseDetail({ houseId, onBack }: HouseDetailProps) {
             </div>
 
             {/* Landmarks */}
-            <div className="bg-white rounded-2xl p-6 border border-border">
-              <h3 className="text-foreground mb-4">Nearby Landmarks</h3>
-              <div className="space-y-3">
-                {house.landmarks.map((landmark, index) => (
-                  <div key={index} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                    <span className="text-sm text-foreground">{landmark.name}</span>
-                    <span className="text-sm text-primary">{landmark.distance}</span>
-                  </div>
-                ))}
+            {house.landmarks && (
+              <div className="bg-white rounded-2xl p-6 border border-border">
+                <h3 className="text-foreground mb-3">Nearby Landmarks</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">{house.landmarks}</p>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Management Info */}
+            {/* Management */}
             <div className="bg-white rounded-2xl p-6 border border-border">
               <h3 className="text-foreground mb-4">Property Management</h3>
               <div className="flex items-center gap-3 p-3 bg-accent rounded-xl">
                 <ShieldCheck className="w-10 h-10 text-accent-foreground" />
                 <div>
                   <div className="text-sm text-muted-foreground">Managed By</div>
-                  <div className="text-foreground">{house.managedBy}</div>
+                  <div className="text-foreground">{house.managed_by}</div>
                 </div>
               </div>
             </div>
 
-            {/* Locked Contact Information */}
+            {/* Contact / Unlock */}
             <div className="bg-white rounded-2xl p-6 border border-border">
               <div className="flex items-center gap-2 mb-4">
-                <Lock className="w-5 h-5 text-muted-foreground" />
+                {house.is_unlocked ? (
+                  <CheckCircle2 className="w-5 h-5 text-green-500" />
+                ) : (
+                  <Lock className="w-5 h-5 text-muted-foreground" />
+                )}
                 <h3 className="text-foreground">Contact Details</h3>
               </div>
 
-              {!isPaid ? (
+              {!house.is_unlocked ? (
                 <div>
-                  {/* Blurred Info */}
                   <div className="mb-4 space-y-3">
                     <div className="p-3 bg-muted rounded-xl">
                       <div className="text-sm text-muted-foreground mb-1">Exact Location</div>
-                      <div className="text-foreground blur-sm select-none">
-                        {house.exactLocation}
-                      </div>
-                    </div>
-                    <div className="p-3 bg-muted rounded-xl">
-                      <div className="text-sm text-muted-foreground mb-1">Contact Person</div>
-                      <div className="text-foreground blur-sm select-none">
-                        {house.contactName}
-                      </div>
+                      <div className="text-foreground blur-sm select-none">Plot 245, Mamboleo Estate</div>
                     </div>
                     <div className="p-3 bg-muted rounded-xl">
                       <div className="text-sm text-muted-foreground mb-1">Phone Number</div>
-                      <div className="text-foreground blur-sm select-none">
-                        {house.contactPerson}
-                      </div>
+                      <div className="text-foreground blur-sm select-none">+254 7XX XXX XXX</div>
                     </div>
                   </div>
-
-                  {/* Unlock Button */}
                   <button
                     onClick={() => setShowPaymentModal(true)}
                     className="w-full bg-primary text-white py-3.5 rounded-xl hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
                   >
                     <Lock className="w-5 h-5" />
-                    Unlock for KSh 400
+                    Unlock for KSh 1
                   </button>
-
                   <p className="text-xs text-muted-foreground text-center mt-3">
-                    Get verified contact details and exact location
+                    Pay via M-Pesa to get verified contact details and exact location
                   </p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {/* Unlocked Info */}
-                  <div className="p-3 bg-accent rounded-xl">
-                    <div className="text-sm text-muted-foreground mb-1">Exact Location</div>
-                    <div className="text-foreground flex items-start gap-2">
-                      <Navigation className="w-4 h-4 mt-0.5 text-primary flex-shrink-0" />
-                      <span>{house.exactLocation}</span>
+                  {house.exact_location && (
+                    <div className="p-3 bg-accent rounded-xl">
+                      <div className="text-sm text-muted-foreground mb-1">Exact Location</div>
+                      <div className="text-foreground flex items-start gap-2">
+                        <Navigation className="w-4 h-4 mt-0.5 text-primary flex-shrink-0" />
+                        <span>{house.exact_location}</span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="p-3 bg-accent rounded-xl">
-                    <div className="text-sm text-muted-foreground mb-1">Contact Person</div>
-                    <div className="text-foreground">{house.contactName}</div>
-                  </div>
-                  <div className="p-3 bg-accent rounded-xl">
-                    <div className="text-sm text-muted-foreground mb-1">Phone Number</div>
+                  )}
+                  {house.contact_number && (
+                    <div className="p-3 bg-accent rounded-xl">
+                      <div className="text-sm text-muted-foreground mb-1">Phone Number</div>
+                      <a
+                        href={`tel:${house.contact_number}`}
+                        className="text-primary flex items-center gap-2 hover:underline"
+                      >
+                        <Phone className="w-4 h-4" />
+                        {house.contact_number}
+                      </a>
+                    </div>
+                  )}
+                  {house.contact_number && (
                     <a
-                      href={`tel:${house.contactPerson}`}
-                      className="text-primary flex items-center gap-2 hover:underline"
+                      href={`tel:${house.contact_number}`}
+                      className="block w-full bg-primary text-white py-3.5 rounded-xl hover:bg-primary/90 transition-colors text-center"
                     >
-                      <Phone className="w-4 h-4" />
-                      {house.contactPerson}
+                      Call Now
                     </a>
-                  </div>
-                  
-                  <button className="w-full bg-primary text-white py-3.5 rounded-xl hover:bg-primary/90 transition-colors">
-                    Call Now
-                  </button>
+                  )}
                 </div>
               )}
             </div>
@@ -340,22 +418,20 @@ export function KayaHouseDetail({ houseId, onBack }: HouseDetailProps) {
           <div className="bg-white rounded-2xl p-8 max-w-md w-full">
             <h2 className="text-2xl text-foreground mb-2">Unlock Contact Details</h2>
             <p className="text-muted-foreground mb-6">
-              Pay KSh 400 to get verified contact information and exact location
+              Pay KSh 1 via M-Pesa to get verified contact information and exact location
             </p>
 
-            {!showOtpInput ? (
+            {!stkSent ? (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm text-foreground mb-2">
-                    M-Pesa Phone Number
-                  </label>
+                  <label className="block text-sm text-foreground mb-2">M-Pesa Phone Number</label>
                   <div className="relative">
                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <input
                       type="tel"
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
-                      placeholder="+254 712 345 678"
+                      value={paymentPhone}
+                      onChange={(e) => setPaymentPhone(e.target.value)}
+                      placeholder="07XX XXX XXX"
                       className="w-full pl-12 pr-4 py-3.5 bg-input-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
@@ -364,66 +440,58 @@ export function KayaHouseDetail({ houseId, onBack }: HouseDetailProps) {
                 <div className="bg-accent p-4 rounded-xl">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-sm text-muted-foreground">Amount</span>
-                    <span className="text-lg text-foreground">KSh 400</span>
+                    <span className="text-lg text-foreground">KSh 1</span>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    You'll receive an M-Pesa STK push on your phone
+                    You'll receive an M-Pesa STK push on your phone — enter your PIN to confirm
                   </p>
                 </div>
 
+                {paymentError && (
+                  <p className="text-sm text-destructive text-center">{paymentError}</p>
+                )}
+
                 <div className="flex gap-3">
                   <button
-                    onClick={() => setShowPaymentModal(false)}
+                    onClick={handleCloseModal}
                     className="flex-1 px-4 py-3 border border-border rounded-xl hover:bg-muted transition-colors"
                   >
                     Cancel
                   </button>
                   <button
-                    onClick={handlePayment}
-                    className="flex-1 px-4 py-3 bg-primary text-white rounded-xl hover:bg-primary/90 transition-colors"
+                    onClick={handleInitiatePayment}
+                    disabled={paymentLoading || !paymentPhone}
+                    className="flex-1 px-4 py-3 bg-primary text-white rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
                   >
-                    Pay Now
+                    {paymentLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Pay Now"}
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Enter the OTP sent to your phone to complete payment
-                </p>
-                <div>
-                  <label className="block text-sm text-foreground mb-2">
-                    OTP Code
-                  </label>
-                  <input
-                    type="text"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value)}
-                    placeholder="1234"
-                    maxLength={4}
-                    className="w-full px-4 py-3.5 bg-input-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 text-center text-2xl tracking-widest"
-                  />
+              <div className="space-y-6 text-center">
+                <div className="flex flex-col items-center gap-3">
+                  {polling ? (
+                    <Loader2 className="w-10 h-10 animate-spin text-primary" />
+                  ) : (
+                    <CheckCircle2 className="w-10 h-10 text-green-500" />
+                  )}
+                  <p className="text-foreground">
+                    {polling
+                      ? "Waiting for payment confirmation..."
+                      : "Payment check timed out"}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {polling
+                      ? "Check your phone and enter your M-Pesa PIN. This page will update automatically."
+                      : "If you completed the payment, please go back and reopen this listing to see updated details."}
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground text-center">
-                  Demo: Use <strong>1234</strong> as OTP
-                </p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => {
-                      setShowOtpInput(false);
-                      setOtp("");
-                    }}
-                    className="flex-1 px-4 py-3 border border-border rounded-xl hover:bg-muted transition-colors"
-                  >
-                    Back
-                  </button>
-                  <button
-                    onClick={handleVerifyOtp}
-                    className="flex-1 px-4 py-3 bg-primary text-white rounded-xl hover:bg-primary/90 transition-colors"
-                  >
-                    Verify OTP
-                  </button>
-                </div>
+                <button
+                  onClick={handleCloseModal}
+                  className="w-full px-4 py-3 border border-border rounded-xl hover:bg-muted transition-colors"
+                >
+                  {polling ? "Cancel" : "Close"}
+                </button>
               </div>
             )}
           </div>
