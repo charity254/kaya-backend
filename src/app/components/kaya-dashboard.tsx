@@ -1,6 +1,13 @@
 import { Search, SlidersHorizontal, MapPin, Home as HomeIcon, Bed, User, Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { useState, useEffect } from "react";
+import { apiGet } from "../lib/api";
+
+interface MediaItem {
+  id: string;
+  media_url: string;
+  media_type: string;
+}
 
 interface House {
   id: string;
@@ -16,7 +23,7 @@ interface House {
   landmarks: string;
   distance_info: string;
   is_unlocked: boolean;
-  media: string | null;
+  media: MediaItem[] | null;
   created_at: string;
   updated_at: string;
 }
@@ -26,7 +33,6 @@ interface ApiResponse {
   houses: House[];
 }
 
-// Derive type label from title string
 function getTypeFromTitle(title: string): string {
   const lower = title.toLowerCase();
   if (lower.includes("bedsitter")) return "Bedsitter";
@@ -36,13 +42,11 @@ function getTypeFromTitle(title: string): string {
   return "House";
 }
 
-// Extract bedroom count from title string
 function getBedroomsFromTitle(title: string): number {
   const match = title.match(/(\d+)\s*bedroom/i);
   return match ? parseInt(match[1]) : 1;
 }
 
-// Check if listing is "new" (created within last 7 days)
 function isNewListing(createdAt: string): boolean {
   const created = new Date(createdAt);
   const now = new Date();
@@ -50,7 +54,6 @@ function isNewListing(createdAt: string): boolean {
   return diffDays <= 7;
 }
 
-// Fallback image pool for houses without media
 const FALLBACK_IMAGES = [
   "https://images.unsplash.com/photo-1764921587475-866c1d48dc48?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400",
   "https://images.unsplash.com/photo-1507138451611-3001135909fa?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400",
@@ -60,8 +63,9 @@ const FALLBACK_IMAGES = [
   "https://images.unsplash.com/photo-1757439402224-56c48352f719?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400",
 ];
 
-function getFallbackImage(index: number): string {
-  return FALLBACK_IMAGES[index % FALLBACK_IMAGES.length];
+function getHouseImage(house: House, index: number): string {
+  const firstImage = house.media?.find((m) => m.media_type === "image")?.media_url;
+  return firstImage ?? FALLBACK_IMAGES[index % FALLBACK_IMAGES.length];
 }
 
 interface DashboardProps {
@@ -81,11 +85,8 @@ export function KayaDashboard({ onHouseClick, onProfileClick, userName }: Dashbo
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("https://kaya-xb37.onrender.com/houses");
-      if (!response.ok) throw new Error(`Failed to fetch houses (${response.status})`);
-      const data: ApiResponse = await response.json();
-      setHouses(data.houses);
-      console.log(data.houses)
+      const data = await apiGet<ApiResponse>("/houses");
+      setHouses(data.houses ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -204,7 +205,6 @@ export function KayaDashboard({ onHouseClick, onProfileClick, userName }: Dashbo
             </div>
           </div>
 
-          {/* Loading State */}
           {loading && (
             <div className="flex flex-col items-center justify-center py-24 gap-4 text-muted-foreground">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -212,7 +212,6 @@ export function KayaDashboard({ onHouseClick, onProfileClick, userName }: Dashbo
             </div>
           )}
 
-          {/* Error State */}
           {!loading && error && (
             <div className="flex flex-col items-center justify-center py-24 gap-4">
               <AlertCircle className="w-10 h-10 text-destructive" />
@@ -226,7 +225,6 @@ export function KayaDashboard({ onHouseClick, onProfileClick, userName }: Dashbo
             </div>
           )}
 
-          {/* Empty State */}
           {!loading && !error && filteredHouses.length === 0 && (
             <div className="flex flex-col items-center justify-center py-24 gap-3 text-muted-foreground">
               <HomeIcon className="w-10 h-10" />
@@ -234,14 +232,13 @@ export function KayaDashboard({ onHouseClick, onProfileClick, userName }: Dashbo
             </div>
           )}
 
-          {/* Grid */}
           {!loading && !error && filteredHouses.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredHouses.map((house, index) => {
                 const type = getTypeFromTitle(house.title);
                 const bedrooms = getBedroomsFromTitle(house.title);
                 const isNew = isNewListing(house.created_at);
-                const image = house.media ?? getFallbackImage(index);
+                const image = getHouseImage(house, index);
 
                 return (
                   <button
@@ -249,7 +246,6 @@ export function KayaDashboard({ onHouseClick, onProfileClick, userName }: Dashbo
                     onClick={() => onHouseClick(house.id)}
                     className="bg-white rounded-2xl overflow-hidden border border-border hover:shadow-lg transition-all group text-left"
                   >
-                    {/* Image */}
                     <div className="relative aspect-[4/3] overflow-hidden bg-muted">
                       <ImageWithFallback
                         src={image}
@@ -261,12 +257,18 @@ export function KayaDashboard({ onHouseClick, onProfileClick, userName }: Dashbo
                           New
                         </div>
                       )}
-                      <div className="absolute top-3 left-3 px-3 py-1 bg-white/90 backdrop-blur-sm text-xs rounded-full text-foreground">
-                        {type}
-                      </div>
+                      {house.is_unlocked && (
+                        <div className="absolute top-3 left-3 px-3 py-1 bg-green-500 text-white text-xs rounded-full">
+                          Unlocked
+                        </div>
+                      )}
+                      {!house.is_unlocked && (
+                        <div className="absolute top-3 left-3 px-3 py-1 bg-white/90 backdrop-blur-sm text-xs rounded-full text-foreground">
+                          {type}
+                        </div>
+                      )}
                     </div>
 
-                    {/* Info */}
                     <div className="p-5">
                       <h3 className="text-card-foreground mb-2 line-clamp-1">{house.title}</h3>
 
