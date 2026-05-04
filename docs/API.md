@@ -1,6 +1,6 @@
 # Kaya API Documentation
 
-Base URL: `https://kaya-backend-production-beb0.up.railway.app`
+Base URL: `https://kaya-xb37.onrender.com` [Backend]
 
 ---
 
@@ -17,7 +17,7 @@ Kaya uses phone number + OTP authentication. There are no passwords.
 
 ### Sending the JWT token
 ```
-Authorization: Bearer YOUR_JWT_TOKEN
+Authorization: Bearer JWT_TOKEN
 ```
 
 ---
@@ -94,31 +94,39 @@ Authorization: Bearer YOUR_JWT_TOKEN
 **GET** `/houses` — Auth optional
 
 **Query Parameters:**
-- `limit` (int): Items per page (default 20, max 100)
-- `offset` (int): Pagination offset
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `general_location` | string | Filter by area e.g. Westlands |
+| `min_rent` | number | Minimum rent in KES |
+| `max_rent` | number | Maximum rent in KES |
+| `limit` | number | Results per page (default: 20, max: 100) |
+| `offset` | number | Results to skip (for pagination) |
 
 **Success `200`:**
 ```json
-[
-  {
-    "id": "uuid",
-    "title": "Beautiful Villa",
-    "description": "A spacious house...",
-    "rent_price": 40000,
-    "general_location": "Nairobi",
-    "exact_location": null,
-    "latitude": null,
-    "longitude": null,
-    "contact_number": null,
-    "managed_by": "Agent Name",
-    "landmarks": "Near mall",
-    "distance_info": "5km from CBD",
-    "is_unlocked": false,
-    "media": [],
-    "created_at": "timestamp",
-    "updated_at": "timestamp"
-  }
-]
+{
+  "count": 1,
+  "houses": [
+    {
+      "id": "uuid",
+      "title": "Beautiful Villa",
+      "description": "A spacious house...",
+      "rent_price": 40000,
+      "general_location": "Nairobi",
+      "exact_location": null,
+      "latitude": null,
+      "longitude": null,
+      "contact_number": null,
+      "managed_by": "Agent Name",
+      "landmarks": "Near mall",
+      "distance_info": "5km from CBD",
+      "is_unlocked": false,
+      "media": [],
+      "created_at": "timestamp",
+      "updated_at": "timestamp"
+    }
+  ]
+}
 ```
 *Note: `exact_location`, `latitude`, `longitude`, and `contact_number` are only populated if the user is authenticated and has paid to unlock the house (`is_unlocked: true`). Otherwise, they are `null`.*
 
@@ -131,10 +139,14 @@ Authorization: Bearer YOUR_JWT_TOKEN
 Returns a single house object identical to the list items above.
 
 **Errors:**
-- `404` — `"house not found"`
-- `500` — Server errors
+| Status | Message | Reason |
+|--------|---------|--------|
+| `404` | `"house not found"` | No house with that ID |
+| `500` | `"failed to get house"` | Server error |
 
-## Note
+---
+
+## Notes for Houses
 - `exact_location`, `latitude`, `longitude`, `contact_number` are `null` until user pays
 - `is_unlocked: true` means user has paid and sensitive fields are visible
 - Use `limit` and `offset` for pagination
@@ -152,12 +164,70 @@ Authorization: Bearer <token>
 
 ---
 
-## Admin Routes (Protected)
+## Admin Routes (JWT + admin role required)
 
 These routes require both a valid JWT token and that the user's role is `admin`.
 
-### 1. Create a House
-**POST** `/admin/houses`
+### 1. Get All Houses (Admin View)
+**GET** `/admin/houses` — Auth required (admin only)
+
+Returns all houses with **no masking** — admin can see all fields including `exact_location`, `contact_number`, `latitude` and `longitude` for every house regardless of payment status.
+
+**Success `200`:**
+```json
+{
+  "count": 2,
+  "houses": [
+    {
+      "id": "uuid",
+      "title": "2 Bedroom Apartment in Westlands",
+      "description": "Modern apartment",
+      "rent_price": 25000,
+      "general_location": "Westlands",
+      "exact_location": "Apartment 4B, Westlands Road, Nairobi",
+      "latitude": -1.2673,
+      "longitude": 36.8026,
+      "contact_number": "0712345678",
+      "managed_by": "John Properties",
+      "landmarks": "Near Sarit Centre",
+      "distance_info": "2km from roundabout",
+      "created_at": "timestamp",
+      "updated_at": "timestamp"
+    }
+  ]
+}
+```
+
+**Errors:**
+| Status | Message | Reason |
+|--------|---------|--------|
+| `401` | `"authorization header is required"` | No token provided |
+| `403` | `"access denied: admin only"` | User is not an admin |
+| `500` | `"failed to get houses"` | Server error |
+
+---
+
+### 2. Get House by ID (Admin View)
+**GET** `/admin/houses/{id}` — Auth required (admin only)
+
+Returns a single house with **no masking** — all fields visible.
+
+**Success `200`:**
+Returns a single house object identical to the admin list items above.
+
+**Errors:**
+| Status | Message | Reason |
+|--------|---------|--------|
+| `400` | `"house ID is required"` | No ID provided |
+| `401` | `"authorization header is required"` | No token provided |
+| `403` | `"access denied: admin only"` | User is not an admin |
+| `404` | `"house not found"` | No house with that ID |
+| `500` | `"failed to get house"` | Server error |
+
+---
+
+### 3. Create a House
+**POST** `/admin/houses` — Auth required (admin only)
 
 **Request Body:**
 ```json
@@ -176,33 +246,43 @@ These routes require both a valid JWT token and that the user's role is `admin`.
 }
 ```
 
+**Required fields:** `title`, `rent_price`, `general_location`
+
 **Success `201`:**
-Returns the complete created house object, including unmasked fields.
+Returns the complete created house object with all fields unmasked.
 
 **Errors:**
-- `400` — Invalid request body or validation failure
-- `403` — Access denied: admin only
+| Status | Message | Reason |
+|--------|---------|--------|
+| `400` | `"invalid request body"` | Body missing or not valid JSON |
+| `400` | `"title is required"` | Title field is empty |
+| `400` | `"rent price must be greater than 0"` | Invalid rent price |
+| `400` | `"general location is required"` | Location field is empty |
+| `403` | `"access denied: admin only"` | User is not an admin |
 
 ---
 
-### 2. Update a House
-**PUT** `/admin/houses/{id}`
+### 4. Update a House
+**PUT** `/admin/houses/{id}` — Auth required (admin only)
 
 **Request Body:**
-Same as `POST /admin/houses`. Every field must be provided.
+Same as `POST /admin/houses`. All fields must be provided.
 
 **Success `200`:**
-Returns the updated house object.
+Returns the updated house object with all fields.
 
 **Errors:**
-- `404` — House not found
-- `400` — Invalid request body or house ID
-- `403` — Access denied: admin only
+| Status | Message | Reason |
+|--------|---------|--------|
+| `400` | `"invalid request body"` | Body missing or not valid JSON |
+| `400` | `"house ID is required"` | No ID in URL |
+| `403` | `"access denied: admin only"` | User is not an admin |
+| `404` | `"house not found"` | No house with that ID |
 
 ---
 
-### 3. Delete a House
-**DELETE** `/admin/houses/{id}`
+### 5. Delete a House
+**DELETE** `/admin/houses/{id}` — Auth required (admin only)
 
 **Success `200`:**
 ```json
@@ -210,18 +290,67 @@ Returns the updated house object.
 ```
 
 **Errors:**
-- `404` — House not found
-- `403` — Access denied: admin only
-
-Currently, the server is configured to protect routes added to the subrouter in `main.go`.
+| Status | Message | Reason |
+|--------|---------|--------|
+| `403` | `"access denied: admin only"` | User is not an admin |
+| `404` | `"house not found"` | No house with that ID |
+| `500` | `"failed to delete house"` | Server error |
 
 ---
 
+## Payments
+
+### 1. Initiate Payment (STK Push)
+**POST** `/payments/initiate` — Auth required
+
+Initiates an M-PESA STK Push to the user's phone to unlock a specific house.
+
+**Request Body:**
+```json
+{
+  "house_id": "uuid-here",
+  "phone": "254712345678"
+}
+```
+
+**Success `200`:**
+```json
+{
+  "message": "STK push sent. Enter your M-PESA PIN to complete payment",
+  "payment_id": "uuid-here",
+  "status": "pending"
+}
+```
+*Note: If the house is already unlocked, it returns `status: paid` and a different message.*
+
+**Errors:**
+| Status | Message | Reason |
+|--------|---------|--------|
+| `400` | `"house_id is required"` | Missing house ID |
+| `400` | `"phone is required"` | Missing phone number |
+| `401` | `"unauthorized"` | No valid JWT token |
+| `500` | `"failed to initiate payment"` | Server error |
+
 ---
 
-## Notes for Frontend
+### 2. M-PESA Callback Webhook
+**POST** `/payments/callback` — No auth required (Called directly by Safaricom Daraja)
+
+Handles the asynchronous payment result from Safaricom and unlocks the house automatically on success.
+
+**Success `200`:**
+```json
+{
+  "ResultCode": "0",
+  "ResultDesc": "Accepted"
+}
+```
+
+---
+
+## General Notes
 - OTP expires after **5 minutes** — show a countdown and allow resend
 - JWT expires after **24 hours** — redirect to login on `401` response
 - Phone numbers always returned in `254XXXXXXXXX` format
 - No separate signup — user is created automatically on first OTP request
-- More endpoints coming as backend is built
+- Admin role must be assigned manually in the database by the backend team

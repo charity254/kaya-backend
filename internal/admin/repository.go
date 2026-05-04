@@ -127,3 +127,90 @@ func (r *Repository) DeleteHouse(id string) (bool, error) {
 	}
 	return rowsAffected > 0, nil
 }
+
+// GetHouses retrieves all house listings for admin view
+// Returns all houses with no masking applied
+func (r *Repository) GetHouses() ([]HouseResult, error) {
+	query := `
+		SELECT id, title, description, rent_price, general_location,
+			exact_location, latitude, longitude, contact_number,
+			managed_by, landmarks, distance_info, created_at, updated_at
+		FROM houses
+		ORDER BY created_at DESC
+	`
+
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("admin.repository.GetHouses: failed to query houses: %w", err)
+	}
+	defer rows.Close()
+
+	var houses []HouseResult
+	for rows.Next() {
+		var h HouseResult
+		var exactLocation, contactNumber, description, managedBy, landmarks, distanceInfo sql.NullString
+		var latitude, longitude sql.NullFloat64
+
+		err := rows.Scan(
+			&h.ID, &h.Title, &description, &h.RentPrice, &h.GeneralLocation,
+			&exactLocation, &latitude, &longitude, &contactNumber,
+			&managedBy, &landmarks, &distanceInfo, &h.CreatedAt, &h.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("admin.repository.GetHouses: failed to scan house: %w", err)
+		}
+
+		// Handle nullable fields
+		h.Description = description.String
+		h.ExactLocation = exactLocation.String
+		h.Latitude = latitude.Float64
+		h.Longitude = longitude.Float64
+		h.ContactNumber = contactNumber.String
+		h.ManagedBy = managedBy.String
+		h.Landmarks = landmarks.String
+		h.DistanceInfo = distanceInfo.String
+
+		houses = append(houses, h)
+	}
+	return houses, nil
+}
+
+// GetHouseByID retrieves a single house by ID for admin view
+// Returns the house with no masking applied
+func (r *Repository) GetHouseByID(id string) (*HouseResult, error) {
+	query := `
+		SELECT id, title, description, rent_price, general_location,
+			exact_location, latitude, longitude, contact_number,
+			managed_by, landmarks, distance_info, created_at, updated_at
+		FROM houses
+		WHERE id = $1
+	`
+
+	var h HouseResult
+	var exactLocation, contactNumber, description, managedBy, landmarks, distanceInfo sql.NullString
+	var latitude, longitude sql.NullFloat64
+
+	err := r.db.QueryRow(query, id).Scan(
+		&h.ID, &h.Title, &description, &h.RentPrice, &h.GeneralLocation,
+		&exactLocation, &latitude, &longitude, &contactNumber,
+		&managedBy, &landmarks, &distanceInfo, &h.CreatedAt, &h.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil // house not found
+	}
+	if err != nil {
+		return nil, fmt.Errorf("admin.repository.GetHouseByID: failed to query house: %w", err)
+	}
+
+	// Handle nullable fields
+	h.Description = description.String
+	h.ExactLocation = exactLocation.String
+	h.Latitude = latitude.Float64
+	h.Longitude = longitude.Float64
+	h.ContactNumber = contactNumber.String
+	h.ManagedBy = managedBy.String
+	h.Landmarks = landmarks.String
+	h.DistanceInfo = distanceInfo.String
+
+	return &h, nil
+}

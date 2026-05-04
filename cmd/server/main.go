@@ -11,6 +11,7 @@ import (
 	"github.com/charity254/kaya-backend/internal/database"   //database package
 	"github.com/charity254/kaya-backend/internal/houses"
 	"github.com/charity254/kaya-backend/internal/middleware" //authentication
+	"github.com/charity254/kaya-backend/internal/payments"
 	"github.com/gorilla/mux"                                 //handles HTTP routing
 	"github.com/rs/cors"
 )
@@ -23,22 +24,39 @@ func main() {
 		port = "8080"
 	}
 
+
 	db := database.Connect(cfg.DBUrl)
 	defer db.Close()
 
-	otpLimiter := middleware.NewRateLimiter(5, 15*time.Minute)
+	otpLimiter := middleware.NewRateLimiter(5, 15*time.Minute) //maximum of 5 requests per phone number per 15 minutes
 
+	//auth layer
 	authRepo	:= auth.NewRepository(db)
 	authService := auth.NewService(authRepo, cfg.JWTSecret)
 	authHandler := auth.NewHandler(authService, otpLimiter)
 
+	//houses layer
 	housesRepo 	  := houses.NewRepository(db)
 	housesService := houses.NewService(housesRepo)
 	housesHandler := houses.NewHandler(housesService)
 
+	//admin layer
 	adminRepo 	 := admin.NewRepository(db)
 	adminService := admin.NewService(adminRepo)
 	adminHandler := admin.NewHandler(adminService)
+
+	mpesaClient := payments.NewMpesaClient(
+		cfg.MpesaConsumerKey,
+		cfg.MpesaConsumerSecret,
+		cfg.MpesaShortcode,
+		cfg.MpesaPasskey,
+		cfg.MpesaCallbackURL,
+	)
+
+	//payment layer
+	paymentsRepo := payments.NewRepository(db)
+	paymentsService := payments.NewService(paymentsRepo, mpesaClient)
+	paymentsHandler := payments.NewHandler(paymentsService)
 
 	router := mux.NewRouter()
 
@@ -55,9 +73,14 @@ func main() {
 	router.HandleFunc("/houses", housesHandler.GetHouses).Methods("GET")
 	router.HandleFunc("/houses/{id}", housesHandler.GetHouseByID).Methods("GET")
 
+	// Payments callback
+	router.HandleFunc("/payments/callback", paymentsHandler.HandleCallback).Methods("POST")
+
 	//protected routes (JWT authentication required). Every request to this routes must have a valid JWT  token
 	protected := router.PathPrefix("").Subrouter()
 	protected.Use(middleware.AuthMiddleware(cfg.JWTSecret))
+
+	protected.HandleFunc("/payments/initiate", paymentsHandler.InitiatePayment).Methods("POST")
 
 	// ─── Admin routes (JWT + admin role required) ──────────────────────
 	adminRouter := router.PathPrefix("/admin").Subrouter()
@@ -65,6 +88,8 @@ func main() {
 	adminRouter.Use(middleware.AdminMiddleware)
 
 	// Admin house management routes
+	adminRouter.HandleFunc("/houses", adminHandler.GetHouses).Methods("GET")
+	adminRouter.HandleFunc("/houses/{id}", adminHandler.GetHouseByID).Methods("GET")
 	adminRouter.HandleFunc("/houses", adminHandler.CreateHouse).Methods("POST")
 	adminRouter.HandleFunc("/houses/{id}", adminHandler.UpdateHouse).Methods("PUT")
 	adminRouter.HandleFunc("/houses/{id}", adminHandler.DeleteHouse).Methods("DELETE")
