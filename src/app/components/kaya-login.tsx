@@ -1,30 +1,57 @@
-import { Mail, Phone, User, Home, ArrowRight } from "lucide-react";
+import { Phone, Home, ArrowRight, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { apiPost, setToken } from "../lib/api";
+
+interface VerifyOTPResponse {
+  token: string;
+  user: { id: string; phone: string; role: string };
+}
 
 interface KayaLoginProps {
-  onLogin: (userData: { name: string; email: string; phone: string }) => void;
+  onLogin: (userData: { id: string; phone: string; token: string }) => void;
 }
 
 export function KayaLogin({ onLogin }: KayaLoginProps) {
-  const [isRegister, setIsRegister] = useState(false);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [step, setStep] = useState<"phone" | "otp">("phone");
   const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleRequestOTP = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isRegister) {
-      onLogin({ name, email, phone });
-    } else {
-      // Mock login - in real app would verify credentials
-      onLogin({ name: "Alex Ochieng", email, phone: "+254712345678" });
+    setError(null);
+    setLoading(true);
+    try {
+      await apiPost("/auth/request-otp", { phone });
+      setStep("otp");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to send OTP");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      const res = await apiPost<VerifyOTPResponse>("/auth/verify-otp", { phone, otp });
+      setToken(res.token);
+      localStorage.setItem("kaya_user", JSON.stringify({ id: res.user.id, phone: res.user.phone, token: res.token }));
+      onLogin({ id: res.user.id, phone: res.user.phone, token: res.token });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Invalid OTP");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary via-primary to-secondary flex items-center justify-center px-6 py-12">
       <div className="w-full max-w-md">
-        {/* Logo/Header */}
+        {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-block p-5 bg-white rounded-3xl mb-4 shadow-2xl">
             <Home className="w-12 h-12 text-primary" />
@@ -37,106 +64,91 @@ export function KayaLogin({ onLogin }: KayaLoginProps) {
         <div className="bg-white rounded-3xl p-8 shadow-2xl">
           <div className="text-center mb-6">
             <h2 className="text-foreground mb-2">
-              {isRegister ? "Create Account" : "Welcome Back"}
+              {step === "phone" ? "Welcome" : "Verify OTP"}
             </h2>
             <p className="text-sm text-muted-foreground">
-              {isRegister
-                ? "Start your house hunting journey"
-                : "Sign in to continue house hunting"}
+              {step === "phone"
+                ? "Enter your phone number to get started"
+                : `We sent a 6-digit code to ${phone}`}
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Name Input - Only for Register */}
-            {isRegister && (
+          {step === "phone" ? (
+            <form onSubmit={handleRequestOTP} className="space-y-4">
               <div>
-                <label htmlFor="name" className="block text-sm text-foreground mb-2">
-                  Full Name
+                <label htmlFor="phone" className="block text-sm text-foreground mb-2">
+                  Phone Number
                 </label>
                 <div className="relative">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
-                    <User className="w-5 h-5" />
+                    <Phone className="w-5 h-5" />
                   </div>
                   <input
-                    id="name"
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="John Doe"
+                    id="phone"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="07XX XXX XXX or +254..."
                     className="w-full pl-12 pr-4 py-3.5 bg-input-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                     required
                   />
                 </div>
               </div>
-            )}
 
-            {/* Email Input */}
-            <div>
-              <label htmlFor="email" className="block text-sm text-foreground mb-2">
-                Email Address
-              </label>
-              <div className="relative">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
-                  <Mail className="w-5 h-5" />
-                </div>
+              {error && (
+                <p className="text-sm text-destructive text-center">{error}</p>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-primary text-white py-3.5 rounded-xl hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 mt-6 disabled:opacity-60"
+              >
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Send OTP <ArrowRight className="w-5 h-5" /></>}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleVerifyOTP} className="space-y-4">
+              <div>
+                <label htmlFor="otp" className="block text-sm text-foreground mb-2">
+                  One-Time Password
+                </label>
                 <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  className="w-full pl-12 pr-4 py-3.5 bg-input-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                  id="otp"
+                  type="text"
+                  inputMode="numeric"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  placeholder="000000"
+                  maxLength={6}
+                  className="w-full px-4 py-3.5 bg-input-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 text-center text-2xl tracking-widest"
                   required
                 />
               </div>
-            </div>
 
-            {/* Phone Input */}
-            <div>
-              <label htmlFor="phone" className="block text-sm text-foreground mb-2">
-                Phone Number
-              </label>
-              <div className="relative">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
-                  <Phone className="w-5 h-5" />
-                </div>
-                <input
-                  id="phone"
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+254 712 345 678"
-                  className="w-full pl-12 pr-4 py-3.5 bg-input-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-                  required
-                />
-              </div>
-            </div>
+              {error && (
+                <p className="text-sm text-destructive text-center">{error}</p>
+              )}
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              className="w-full bg-primary text-white py-3.5 rounded-xl hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 mt-6"
-            >
-              {isRegister ? "Create Account" : "Sign In"}
-              <ArrowRight className="w-5 h-5" />
-            </button>
-          </form>
+              <button
+                type="submit"
+                disabled={loading || otp.length < 6}
+                className="w-full bg-primary text-white py-3.5 rounded-xl hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 mt-6 disabled:opacity-60"
+              >
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Verify & Sign In <ArrowRight className="w-5 h-5" /></>}
+              </button>
 
-          {/* Toggle Login/Register */}
-          <div className="text-center mt-6 text-sm">
-            <span className="text-muted-foreground">
-              {isRegister ? "Already have an account? " : "Don't have an account? "}
-            </span>
-            <button
-              onClick={() => setIsRegister(!isRegister)}
-              className="text-primary hover:underline"
-            >
-              {isRegister ? "Sign in" : "Create account"}
-            </button>
-          </div>
+              <button
+                type="button"
+                onClick={() => { setStep("phone"); setOtp(""); setError(null); }}
+                className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                ← Use a different number
+              </button>
+            </form>
+          )}
         </div>
 
-        {/* Trust Badge */}
         <div className="mt-6 text-center">
           <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full text-green-100 text-sm">
             <div className="w-2 h-2 bg-green-300 rounded-full"></div>
