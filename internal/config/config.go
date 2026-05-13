@@ -17,6 +17,7 @@ type Config struct {
 	MpesaPasskey        string // Daraja API passkey for STK push
 	MpesaCallbackURL    string // base URL for M-Pesa callbacks
 	SupabaseURL			string
+	ResendAPIKey		string //API Key for sending OTP emails via Resend
 }
 
 func Load() *Config{
@@ -33,6 +34,7 @@ func Load() *Config{
 		MpesaShortcode:      os.Getenv("MPESA_SHORTCODE"),
 		MpesaPasskey:        os.Getenv("MPESA_PASSKEY"),
 		MpesaCallbackURL:    os.Getenv("MPESA_CALLBACK_BASE_URL"),
-		SupabaseURL: 		 os.Getenv("SUPABASE_URL"),		
+		SupabaseURL: 		 os.Getenv("SUPABASE_URL"),	
+		ResendAPIKey:        os.Getenv("RESEND_API_KEY"),	
 	}
 }

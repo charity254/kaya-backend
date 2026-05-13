@@ -17,16 +17,16 @@ func NewRepository(db *sql.DB) *Repository {
 }
 
 //Creates a new user with the given phone number if they don't already exists
-func(r *Repository) CreateUserIfNotExists(phone string) (string, error) {
+func(r *Repository) CreateUserIfNotExists(phone, email string) (string, error) {
 	var id string
 	//insert new user, if phone exist: return existing user'd id
 	query := `
-	INSERT INTO users (phone)
-	VALUES ($1)
-	ON CONFLICT (phone) DO UPDATE SET updated_at = now()
+	INSERT INTO users (phone, email)
+	VALUES ($1, $2)
+	ON CONFLICT (phone) DO UPDATE SET email = $2, updated_at = now()
 	RETURNING id
 	`
-	err := r.db.QueryRow(query, phone).Scan(&id)
+	err := r.db.QueryRow(query, phone, email).Scan(&id)
 	if err != nil {
 		return "", err
 	}
@@ -34,7 +34,7 @@ func(r *Repository) CreateUserIfNotExists(phone string) (string, error) {
 }
 
 //SaveOTP stores a new OTP code for the given phone number with a 5 minute expiry, previous unused OTPs for this phone number are deleted first
-func (r *Repository) SaveOTP(phone, code string) error {
+func (r *Repository) SaveOTP(phone, email, code string) error {
 	//Delete existing OTPs for this phone number before saving a new one
 	_, err := r.db.Exec(`DELETE FROM otps WHERE phone = $1`, phone)
 	if err != nil {
@@ -42,26 +42,26 @@ func (r *Repository) SaveOTP(phone, code string) error {
 	}
 	//insert new OTP with 5 minute expiry time
 	query := `
-	INSERT INTO otps (phone, code, expires_at)
-	VALUES ($1, $2, $3)
+	INSERT INTO otps (phone, email, code, expires_at)
+	VALUES ($1, $2, $3, $4)
 	`
 	expiresAt := time.Now().Add(5 * time.Minute)
-	_, err = r.db.Exec(query, phone, code, expiresAt)
+	_, err = r.db.Exec(query, phone, email, code, expiresAt)
 	return err
 }
 
 //GetOTP retrieves latest valid OTP for given phone number. Returns OTP and expiry time if found
-func (r *Repository) GetOTP(phone string) (string, time.Time, error) {
+func (r *Repository) GetOTP(email string) (string, time.Time, error) {
 	var code string
 	var expiresAt time.Time
 
 	query := `
 	SELECT code, expires_at FROM otps
-	WHERE phone = $1 AND used = false
+	WHERE email = $1 AND used = false
 	ORDER BY created_at DESC
 	LIMIT 1
 	`
-	err := r.db.QueryRow(query, phone).Scan(&code, &expiresAt)
+	err := r.db.QueryRow(query, email).Scan(&code, &expiresAt)
 	if err != nil {
 		return "", time.Time{}, err
 	}
@@ -69,21 +69,23 @@ func (r *Repository) GetOTP(phone string) (string, time.Time, error) {
 }
 
 //MarkOTOUsed marks an OTP as used
-func (r *Repository) MarkOTPUsed(phone string) error {
-	_, err := r.db.Exec(`UPDATE otps SET used = true WHERE phone = $1`, phone)
+func (r *Repository) MarkOTPUsed(email string) error {
+	_, err := r.db.Exec(`UPDATE otps SET used = true WHERE email = $1`, email)
 	return err
 }
 
 //GetUserByPhone retrieves a user's id and phone from the database by their phone number
-func (r *Repository) GetUserByPhone(phone string) (string, string, string, error) {
+func (r *Repository) GetUserByPhone(phone string) (string, string, string, string, error) {
 	var id, userPhone, role string
+	var email sql.NullString
+
 	query := `
-	SELECT id, phone, role FROM users
+	SELECT id, phone, email, role FROM users
 	WHERE phone = $1
 	`
-	err := r.db.QueryRow(query, phone).Scan(&id, &userPhone, &role)
+	err := r.db.QueryRow(query, phone).Scan(&id, &userPhone,  &role, &email)
 	if err != nil {
-		return "", "", "", fmt.Errorf("User not found: %w", err)
+		return "", "", "", "", fmt.Errorf("User not found: %w", err)
 	}
-	return id, userPhone, role, nil
+	return id, userPhone, role, email.String, nil
 }
